@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+$INPUT_ARTIFACTS_DIR/weak/qbt_fringe.wrapper_generator.release/strong/qbt_fringe.wrapper_generator.release/bin/wrapper_generator $INPUT_ARTIFACTS_DIR/weak/misc1.third_party_tools.main/strong $OUTPUT_ARTIFACTS_DIR \
+    thirdPartyTools qbt.QbtMain \
+
