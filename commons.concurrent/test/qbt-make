@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+
+"$INPUT_ARTIFACTS_DIR"/weak/3p.gradle/strong/3p.gradle/bin/gradle --stacktrace check uploadArchive

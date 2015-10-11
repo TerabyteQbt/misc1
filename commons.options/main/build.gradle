@@ -1,0 +1,34 @@
+apply plugin: 'java'
+
+dependencies {
+    compile fileTree(dir: "$System.env.INPUT_ARTIFACTS_DIR", include: 'strong/*/jars/*.jar')
+}
+
+version = "$System.env.PACKAGE_CUMULATIVE_VERSION"
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src'
+        }
+        resources {
+            srcDir 'src'
+        }
+    }
+    test {
+        java {
+            srcDir 'test'
+        }
+        resources {
+            srcDir 'test'
+        }
+    }
+}
+
+uploadArchives {
+    repositories {
+        flatDir {
+            dir "$System.env.OUTPUT_ARTIFACTS_DIR/jars"
+        }
+    }
+}
