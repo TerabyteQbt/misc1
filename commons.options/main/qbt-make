@@ -2,4 +2,5 @@
 
 set -e
 
+"$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d src
 "$INPUT_ARTIFACTS_DIR"/weak/3p.gradle/strong/3p.gradle/bin/gradle --stacktrace check uploadArchive
