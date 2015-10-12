@@ -47,11 +47,11 @@ import qbt.QbtTempDir;
 import qbt.QbtUtils;
 import qbt.RepoManifest;
 import qbt.config.QbtConfig;
-import qbt.config.RepoConfig;
 import qbt.metadata.PackageMetadataType;
 import qbt.options.ConfigOptionsDelegate;
 import qbt.options.ManifestOptionsDelegate;
 import qbt.options.ManifestOptionsResult;
+import qbt.repo.LocalRepoAccessor;
 import qbt.vcs.Repository;
 
 public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
@@ -90,12 +90,12 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         PackageTip destinationRepo = PackageTip.parseRequire(repo, "repo");
 
         // ensure we have an override for the given repo
-        final RepoConfig.RequireRepoLocalResult requireRepoLocalResult = config.repoConfig.findLocalRepo(destinationRepo);
-        if(requireRepoLocalResult == null) {
+        final LocalRepoAccessor localRepoAccessor = config.repoConfig.findLocalRepo(destinationRepo);
+        if(localRepoAccessor == null) {
             throw new IllegalArgumentException("You must have a local override of repo " + destinationRepo);
         }
-        Path repoRoot = requireRepoLocalResult.getDirectory().normalize();
-        Repository vcsRepo = requireRepoLocalResult.getLocalVcs().getRepository(repoRoot);
+        Path repoRoot = localRepoAccessor.dir.normalize();
+        Repository vcsRepo = localRepoAccessor.vcs.getRepository(repoRoot);
         IvyCache ivyCache = new IvyCache(repoRoot.resolve("mc/.cache"));
 
         Path configFile = repoRoot.resolve("mc/.config");
@@ -291,7 +291,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             IvyModuleAndVersion module = install.getValue();
             String packagePath = getPackagePathFromModule(module);
 
-            Path repoDir = requireRepoLocalResult.getDirectory();
+            Path repoDir = localRepoAccessor.dir;
             Path newPackagePath = repoDir.resolve(packagePath).normalize();
             if(Files.exists(newPackagePath)) {
                 // make sure newPackagePath is actually still inside repoDir
