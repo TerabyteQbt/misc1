@@ -90,7 +90,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         PackageTip destinationRepo = PackageTip.parseRequire(repo, "repo");
 
         // ensure we have an override for the given repo
-        final LocalRepoAccessor localRepoAccessor = config.repoConfig.findLocalRepo(destinationRepo);
+        final LocalRepoAccessor localRepoAccessor = config.localRepoFinder.findLocalRepo(destinationRepo);
         if(localRepoAccessor == null) {
             throw new IllegalArgumentException("You must have a local override of repo " + destinationRepo);
         }
