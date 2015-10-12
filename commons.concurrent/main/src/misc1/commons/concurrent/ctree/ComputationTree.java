@@ -85,4 +85,18 @@ public final class ComputationTree<V> {
     public <W> ComputationTree<W> combineRight(ComputationTree<W> right) {
         return ComputationTree.pair(this, right).transform(Misc1PairUtils.<V, W>rightFunction());
     }
+
+    public static ComputationTree<Boolean> and(Iterable<ComputationTree<Boolean>> inputs) {
+        return ComputationTree.list(inputs).transform(new Function<ImmutableList<Boolean>, Boolean>() {
+            @Override
+            public Boolean apply(ImmutableList<Boolean> input) {
+                for(Boolean b : input) {
+                    if(!b) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        });
+    }
 }
