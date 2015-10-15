@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import qbt.HelpTier;
 import qbt.NormalDependencyType;
 import qbt.PackageManifest;
-import qbt.PackageTip;
 import qbt.QbtCommand;
 import qbt.QbtCommandName;
 import qbt.QbtCommandOptions;
@@ -52,6 +51,8 @@ import qbt.options.ConfigOptionsDelegate;
 import qbt.options.ManifestOptionsDelegate;
 import qbt.options.ManifestOptionsResult;
 import qbt.repo.LocalRepoAccessor;
+import qbt.tip.PackageTip;
+import qbt.tip.RepoTip;
 import qbt.vcs.Repository;
 
 public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
@@ -87,7 +88,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         QbtManifest manifest = manifestResult.parse();
 
         String repo = options.get(Options.destinationRepo);
-        PackageTip destinationRepo = PackageTip.parseRequire(repo, "repo");
+        RepoTip destinationRepo = RepoTip.TYPE.parseRequire(repo);
 
         // ensure we have an override for the given repo
         final LocalRepoAccessor localRepoAccessor = config.localRepoFinder.findLocalRepo(destinationRepo);
@@ -139,7 +140,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             }
             Matcher linkCheckerArgsMatcher = linkCheckerArgsPattern.matcher(configLine);
             if(linkCheckerArgsMatcher.matches()) {
-                linkCheckerArgsBuilder.put(PackageTip.parseRequire(linkCheckerArgsMatcher.group(1), "package"), linkCheckerArgsMatcher.group(2));
+                linkCheckerArgsBuilder.put(PackageTip.TYPE.parseRequire(linkCheckerArgsMatcher.group(1)), linkCheckerArgsMatcher.group(2));
                 continue;
             }
 
@@ -170,7 +171,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                 String packageName = getPackageFromModule(module);
                 String packagePath = getPackagePathFromModule(module);
                 Path newPackagePath = repoRoot.resolve(packagePath).normalize();
-                PackageTip pt = PackageTip.parseRequire(packageName, "package");
+                PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
 
                 if(checkedDisk.add(pt)) {
                     // get version on disk if we have it?
@@ -230,7 +231,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                     if(queued.add(depModule)) {
                         queue.add(depModule);
                     }
-                    depPackageTipsBuilder.add(PackageTip.parseRequire(getPackageFromModule(depModule), "package"));
+                    depPackageTipsBuilder.add(PackageTip.TYPE.parseRequire(getPackageFromModule(depModule)));
                 }
                 Set<PackageTip> depPackageTips = depPackageTipsBuilder.build();
 
@@ -263,7 +264,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             Set<PackageTip> queued = Sets.newHashSet();
             for(IvyModuleAndVersion module : modules) {
                 String packageName = getPackageFromModule(module);
-                PackageTip pt = PackageTip.parseRequire(packageName, "package");
+                PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
                 if(queued.add(pt)) {
                     queue.add(pt);
                 }
@@ -350,13 +351,13 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         pmb.withMetadata(PackageMetadataType.PREFIX, Maybe.of(packagePath));
 
         // add deps
-        PackageTip pt = PackageTip.parseRequire(packageName, "package");
+        PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
         for(PackageTip dep : dependencyEdges.get(pt)) {
             LOGGER.debug("Package " + pt + " depends upon " + dep);
             pmb.withNormalDep(dep, NormalDependencyType.STRONG);
         }
         // add link checker by default - our default script uses it
-        pmb.withNormalDep(PackageTip.parseRequire("qbt_fringe.link_checker.release", "package"), NormalDependencyType.BUILDTIME_WEAK);
+        pmb.withNormalDep(PackageTip.TYPE.parseRequire("qbt_fringe.link_checker.release"), NormalDependencyType.BUILDTIME_WEAK);
 
         PackageManifest pm = pmb.build();
         return pm;
