@@ -3,6 +3,9 @@ package misc1.commons.concurrent.ctree;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import java.util.Map;
 import misc1.commons.tuple.Misc1PairUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -52,6 +55,30 @@ public final class ComputationTree<V> {
             @Override
             public ImmutableList<V> apply(ImmutableList<Object> input) {
                 return (ImmutableList<V>)input;
+            }
+        });
+    }
+
+    public static <K, V> ComputationTree<ImmutableMap<K, V>> map(Map<K, ComputationTree<V>> map) {
+        return list(Iterables.transform(map.entrySet(), new Function<Map.Entry<K, ComputationTree<V>>, ComputationTree<Pair<K, V>>>() {
+            @Override
+            public ComputationTree<Pair<K, V>> apply(Map.Entry<K, ComputationTree<V>> input) {
+                final K k = input.getKey();
+                return input.getValue().transform(new Function<V, Pair<K, V>>() {
+                    @Override
+                    public Pair<K, V> apply(V input) {
+                        return Pair.of(k, input);
+                    }
+                });
+            }
+        })).transform(new Function<ImmutableList<Pair<K, V>>, ImmutableMap<K, V>>() {
+            @Override
+            public ImmutableMap<K, V> apply(ImmutableList<Pair<K, V>> input) {
+                ImmutableMap.Builder<K, V> b = ImmutableMap.builder();
+                for(Pair<K, V> p : input) {
+                    b.put(p);
+                }
+                return b.build();
             }
         });
     }
