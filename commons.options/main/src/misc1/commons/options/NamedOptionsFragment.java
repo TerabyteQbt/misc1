@@ -1,6 +1,7 @@
 package misc1.commons.options;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import java.util.List;
@@ -19,14 +20,36 @@ public abstract class NamedOptionsFragment<O, M, R> implements OptionsFragment<O
 
     @Override
     public final Pair<M, Integer> match(List<String> argsList) {
-        if(!matches.contains(argsList.get(0))) {
-            return null;
+        String arg0 = argsList.get(0);
+        for(String match : matches) {
+            if(arg0.equals(match)) {
+                Pair<M, Integer> matchResult = match1(argsList.subList(1, argsList.size()));
+                if(matchResult != null) {
+                    return Pair.of(matchResult.getLeft(), matchResult.getRight() + 1);
+                }
+            }
+
+            if(match.startsWith("--") && arg0.startsWith(match + "=")) {
+                ImmutableList.Builder<String> argsReplaced = ImmutableList.builder();
+                argsReplaced.add(arg0.substring(match.length() + 1));
+                argsReplaced.addAll(argsList.subList(1, argsList.size()));
+                Pair<M, Integer> matchResult = match1(argsReplaced.build());
+                if(matchResult != null && matchResult.getRight() >= 1) {
+                    return Pair.of(matchResult.getLeft(), matchResult.getRight());
+                }
+            }
+
+            if(match.startsWith("-") && match.length() == 2 && arg0.startsWith(match)) {
+                ImmutableList.Builder<String> argsReplaced = ImmutableList.builder();
+                argsReplaced.add(arg0.substring(match.length()));
+                argsReplaced.addAll(argsList.subList(1, argsList.size()));
+                Pair<M, Integer> matchResult = match1(argsReplaced.build());
+                if(matchResult != null && matchResult.getRight() >= 1) {
+                    return Pair.of(matchResult.getLeft(), matchResult.getRight());
+                }
+            }
         }
-        Pair<M, Integer> match = match1(argsList.subList(1, argsList.size()));
-        if(match == null) {
-            return null;
-        }
-        return Pair.of(match.getLeft(), match.getRight() + 1);
+        return null;
     }
 
     @Override
