@@ -1,0 +1,4 @@
+return [
+    meta_tools.devproto.DevProtoInputs.PROTO,
+    meta_tools.devproto.DevProtoInputs.extra('qbt_fringe.eclipse_gen.simple.release'),
+];
