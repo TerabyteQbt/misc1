@@ -10,6 +10,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.hash.HashCode;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -20,6 +21,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import misc1.commons.Maybe;
@@ -372,14 +374,18 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             // module had no artifacts
             return lines.build();
         }
+        final TreeMap<String, HashCode> hashes = Maps.newTreeMap();
         Files.walkFileTree(srcRoot, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Path relativePath = newPackagePath.relativize(file);
-                lines.add(QbtHashUtils.hash(file) + " " + relativePath.toString());
+                hashes.put(relativePath.toString(), QbtHashUtils.hash(file));
                 return FileVisitResult.CONTINUE;
             }
         });
+        for(Map.Entry<String, HashCode> e : hashes.entrySet()) {
+            lines.add(e.getValue() + " " + e.getKey());
+        }
         return lines.build();
     }
 
