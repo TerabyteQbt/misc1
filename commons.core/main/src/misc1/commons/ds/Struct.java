@@ -1,16 +1,15 @@
 package misc1.commons.ds;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import java.util.Map;
 
 public class Struct<S> {
     private final StructType<S> type;
-    private final Map<StructKey<S, ?>, Object> map;
+    private final ImmutableSalvagingMap<StructKey<S, ?>, Object> map;
 
-    protected Struct(StructType<S> type, Map<StructKey<S, ?>, Object> map) {
+    protected Struct(StructType<S> type, ImmutableSalvagingMap<StructKey<S, ?>, Object> map) {
         this.type = type;
-        this.map = ImmutableMap.copyOf(map);
+        this.map = map;
     }
 
     public <V> V get(StructKey<S, V> k) {
@@ -18,19 +17,25 @@ public class Struct<S> {
     }
 
     public <V> S set(StructKey<S, V> k, V v) {
-        Map<StructKey<S, ?>, Object> newMap = Maps.newHashMap(map);
-        map.put(k, k.onSet(v));
-        return type.create(newMap);
+        return type.create(map.simplePut(k, k.onSet(v)));
+    }
+
+    private ImmutableMap<StructKey<S, ?>, Object> toMap() {
+        ImmutableMap.Builder<StructKey<S, ?>, Object> b = ImmutableMap.builder();
+        for(Map.Entry<StructKey<S, ?>, Object> e : map.entries()) {
+            b.put(e);
+        }
+        return b.build();
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + map.toString();
+        return getClass().getSimpleName() + toMap().toString();
     }
 
     @Override
     public int hashCode() {
-        return map.hashCode();
+        return toMap().hashCode();
     }
 
     @Override
@@ -42,6 +47,6 @@ public class Struct<S> {
             return false;
         }
         Struct<S> other = (Struct<S>)obj;
-        return map.equals(other.map);
+        return toMap().equals(other.toMap());
     }
 }
