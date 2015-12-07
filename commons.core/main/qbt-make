@@ -4,4 +4,4 @@ set -e
 
 if [ -d src ]; then "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d src; fi
 if [ -d test ]; then "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d test; fi
-"$INPUT_ARTIFACTS_DIR"/weak/3p.gradle/strong/3p.gradle/bin/gradle --stacktrace check uploadArchive
+"$INPUT_ARTIFACTS_DIR"/weak/3p.gradle/strong/3p.gradle/bin/gradle --stacktrace check simplePublish

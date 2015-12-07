@@ -25,10 +25,21 @@ sourceSets {
     }
 }
 
-uploadArchives {
-    repositories {
-        flatDir {
-            dir "$System.env.OUTPUT_ARTIFACTS_DIR/jars"
-        }
-    }
+task simplePublishJars(type: Copy) {
+    from jar
+    into "$System.env.OUTPUT_ARTIFACTS_DIR/jars"
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    from sourceSets.test.allSource
+}
+
+task simplePublishSources(type: Copy) {
+    from sourcesJar
+    into "$System.env.OUTPUT_ARTIFACTS_DIR/sources"
+}
+
+task simplePublish {
+    dependsOn simplePublishJars, simplePublishSources
 }
