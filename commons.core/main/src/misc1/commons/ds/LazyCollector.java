@@ -6,33 +6,23 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import java.util.Set;
 
-public abstract class LazyCollector<T> {
-    private LazyCollector() {
-        // hidden
+public final class LazyCollector<T> {
+    public final ImmutableList<T> ts;
+    public final ImmutableList<LazyCollector<T>> delegates;
+
+    private LazyCollector(ImmutableList<T> ts, ImmutableList<LazyCollector<T>> delegates) {
+        this.ts = ts != null ? ts : ImmutableList.<T>of();
+        this.delegates = delegates != null ? delegates : ImmutableList.<LazyCollector<T>>of();
     }
 
-    private static class EmptyLazyCollector<T> extends LazyCollector<T> {
-        @Override
-        protected void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
-        }
-    }
-    private static final EmptyLazyCollector<Object> EMPTY = new EmptyLazyCollector<Object>();
+    private static final LazyCollector<Object> EMPTY = new LazyCollector<Object>(null, null);
     @SuppressWarnings("unchecked")
     public static <T> LazyCollector<T> of() {
         return (LazyCollector<T>)EMPTY;
     }
 
     public static <T> LazyCollector<T> of(Iterable<T> ts) {
-        final ImmutableList<T> tsSafe = ImmutableList.copyOf(ts);
-        class UnlazyLazyCollector extends LazyCollector<T> {
-            @Override
-            protected void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
-                for(T t : tsSafe) {
-                    accumulator.apply(t);
-                }
-            }
-        }
-        return new UnlazyLazyCollector();
+        return new LazyCollector<T>(ImmutableList.copyOf(ts), null);
     }
 
     public static <T> LazyCollector<T> of(final T t) {
@@ -52,34 +42,27 @@ public abstract class LazyCollector<T> {
     }
 
     public LazyCollector<T> union(final LazyCollector<T> other) {
-        final LazyCollector<T> self = this;
-        return new LazyCollector<T>() {
-            @Override
-            protected void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
-                self.accumulate(accumulator, already);
-                other.accumulate(accumulator, already);
-            }
-        };
+        return new LazyCollector(null, ImmutableList.of(this, other));
     }
 
     public static <T> LazyCollector<T> unionIterable(final Iterable<LazyCollector<T>> others) {
-        return new LazyCollector<T>() {
-            @Override
-            protected void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
-                for(LazyCollector<T> other : others) {
-                    other.accumulate(accumulator, already);
-                }
-            }
-        };
+        return new LazyCollector(null, ImmutableList.copyOf(others));
     }
 
-    protected abstract void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already);
-
-    protected void accumulate(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
+    private void accumulate(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
         if(!already.add(this)) {
             return;
         }
         accumulateUncached(accumulator, already);
+    }
+
+    private void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
+        for(T t : ts) {
+            accumulator.apply(t);
+        }
+        for(LazyCollector<T> delegate : delegates) {
+            delegate.accumulate(accumulator, already);
+        }
     }
 
     public ImmutableSet<T> forceSet() {
@@ -109,5 +92,19 @@ public abstract class LazyCollector<T> {
     public void accumulate(Function<T, ?> accumulator) {
         Set<LazyCollector<T>> already = Sets.newHashSet();
         accumulate(accumulator, already);
+    }
+
+    public interface Visitor<T> {
+        public void visitElement(T t);
+        public void visitChild(LazyCollector<T> lc);
+    }
+
+    public void accept(Visitor<T> visitor) {
+        for(T t : ts) {
+            visitor.visitElement(t);
+        }
+        for(LazyCollector<T> delegate : delegates) {
+            visitor.visitChild(delegate);
+        }
     }
 }
