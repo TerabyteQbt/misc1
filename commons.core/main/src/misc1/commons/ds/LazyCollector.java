@@ -62,6 +62,17 @@ public abstract class LazyCollector<T> {
         };
     }
 
+    public static <T> LazyCollector<T> unionIterable(final Iterable<LazyCollector<T>> others) {
+        return new LazyCollector<T>() {
+            @Override
+            protected void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
+                for(LazyCollector<T> other : others) {
+                    other.accumulate(accumulator, already);
+                }
+            }
+        };
+    }
+
     protected abstract void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already);
 
     protected void accumulate(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
