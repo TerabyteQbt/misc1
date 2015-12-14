@@ -3,7 +3,11 @@ package misc1.commons.ds;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
 import java.util.Set;
 
 public final class LazyCollector<T> {
@@ -49,22 +53,6 @@ public final class LazyCollector<T> {
         return new LazyCollector(null, ImmutableList.copyOf(others));
     }
 
-    private void accumulate(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
-        if(!already.add(this)) {
-            return;
-        }
-        accumulateUncached(accumulator, already);
-    }
-
-    private void accumulateUncached(Function<T, ?> accumulator, Set<LazyCollector<T>> already) {
-        for(T t : ts) {
-            accumulator.apply(t);
-        }
-        for(LazyCollector<T> delegate : delegates) {
-            delegate.accumulate(accumulator, already);
-        }
-    }
-
     public ImmutableSet<T> forceSet() {
         final ImmutableSet.Builder<T> b = ImmutableSet.builder();
         accumulate(new Function<T, Void>() {
@@ -89,9 +77,32 @@ public final class LazyCollector<T> {
         return b.build();
     }
 
-    public void accumulate(Function<T, ?> accumulator) {
+    public void accumulate(final Function<T, ?> accumulator) {
         Set<LazyCollector<T>> already = Sets.newHashSet();
-        accumulate(accumulator, already);
+        Deque<LazyCollector<T>> stack = Lists.newLinkedList();
+        stack.addLast(this);
+        while(!stack.isEmpty()) {
+            LazyCollector<T> next = stack.removeLast();
+            if(!already.add(next)) {
+                continue;
+            }
+            final List<LazyCollector<T>> children = Lists.newArrayList();
+            next.accept(new Visitor<T>() {
+                @Override
+                public void visitElement(T t) {
+                    accumulator.apply(t);
+                }
+
+                @Override
+                public void visitChild(LazyCollector<T> lc) {
+                    children.add(lc);
+                }
+            });
+            Collections.reverse(children);
+            for(LazyCollector<T> child : children) {
+                stack.addLast(child);
+            }
+        }
     }
 
     public interface Visitor<T> {
