@@ -1,0 +1,45 @@
+apply plugin: 'java'
+
+dependencies {
+    compile fileTree(dir: "$System.env.INPUT_ARTIFACTS_DIR", include: 'strong/*/jars/*.jar')
+}
+
+version = "$System.env.PACKAGE_CUMULATIVE_VERSION"
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src'
+        }
+        resources {
+            srcDir 'src'
+        }
+    }
+    test {
+        java {
+            srcDir 'test'
+        }
+        resources {
+            srcDir 'test'
+        }
+    }
+}
+
+task simplePublishJars(type: Copy) {
+    from jar
+    into "$System.env.OUTPUT_ARTIFACTS_DIR/jars"
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    from sourceSets.test.allSource
+}
+
+task simplePublishSources(type: Copy) {
+    from sourcesJar
+    into "$System.env.OUTPUT_ARTIFACTS_DIR/sources"
+}
+
+task simplePublish {
+    dependsOn simplePublishJars, simplePublishSources
+}

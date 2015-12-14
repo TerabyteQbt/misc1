@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+
+"$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -l "$INPUT_ARTIFACTS_DIR"/weak/misc1.commons.core.main/strong/misc1.commons.core.main/sources
