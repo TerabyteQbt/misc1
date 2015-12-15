@@ -33,5 +33,5 @@ public abstract class StructType<S> {
         return create(map);
     }
 
-    public abstract S create(ImmutableSalvagingMap<StructKey<S, ?>, Object> map);
+    protected abstract S create(ImmutableSalvagingMap<StructKey<S, ?>, Object> map);
 }
