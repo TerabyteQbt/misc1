@@ -3,6 +3,7 @@ package misc1.commons.ds;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import java.util.AbstractCollection;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
@@ -373,8 +374,8 @@ class MapNode<K, V> {
         return Pair.of(node, null);
     }
 
-    public Iterable<Map.Entry<K, V>> entries() {
-        return new Iterable<Map.Entry<K, V>>() {
+    public AbstractCollection<Map.Entry<K, V>> entries() {
+        return new AbstractCollection<Map.Entry<K, V>>() {
             @Override
             public Iterator<Map.Entry<K, V>> iterator() {
                 final Deque<Either<MapNode<K, V>, Map.Entry<K, V>>> pending = Lists.newLinkedList();
@@ -422,6 +423,11 @@ class MapNode<K, V> {
                         throw new UnsupportedOperationException();
                     }
                 };
+            }
+
+            @Override
+            public int size() {
+                return entrySize;
             }
         };
     }

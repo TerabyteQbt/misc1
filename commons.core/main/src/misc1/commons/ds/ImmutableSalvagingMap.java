@@ -1,8 +1,9 @@
 package misc1.commons.ds;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import java.util.Collection;
 import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -69,8 +70,8 @@ public class ImmutableSalvagingMap<K, V> {
     private static <K, V> Function<Map.Entry<K, V>, K> getKeyFunction() {
         return (Function<Map.Entry<K, V>, K>) (Function) GET_KEY_FUNCTION;
     }
-    public Iterable<K> keys() {
-        return root == null ? ImmutableList.<K>of() : Iterables.transform(root.entries(), ImmutableSalvagingMap.<K, V>getKeyFunction());
+    public Collection<K> keys() {
+        return root == null ? ImmutableList.<K>of() : Collections2.transform(root.entries(), ImmutableSalvagingMap.<K, V>getKeyFunction());
     }
 
     private static final ImmutableSalvagingMap<Object, Object> EMPTY = new ImmutableSalvagingMap<Object, Object>();
