@@ -58,4 +58,37 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
     public static <T> ImmutableSalvagingSet<T> of() {
         return new ImmutableSalvagingSet<T>();
     }
+
+    public boolean containsAll(Iterable<?> objects) {
+        for(Object o : objects) {
+            if(!this.contains(o)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null) {
+            return false;
+        }
+        if(this == obj) {
+            return true;
+        }
+        if(obj instanceof ImmutableSalvagingSet<?>) {
+            if(((ImmutableSalvagingSet<?>) obj).size() != this.size()) {
+                return false;
+            }
+            if(this.containsAll((ImmutableSalvagingSet<?>) obj)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return root.hashCode();
+    }
 }
