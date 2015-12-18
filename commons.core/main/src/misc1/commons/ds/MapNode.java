@@ -32,8 +32,30 @@ class MapNode<K, V> {
     private final Object[] keys;
     private final Object[] values;
 
-    private final int hashCode;
-    private final int hashCodeMul;
+    private static class HashCodeStats {
+        public final int v;
+        public final int m;
+
+        private HashCodeStats(int v, int m) {
+            this.v = v;
+            this.m = m;
+        }
+
+        public HashCodeStats(int v) {
+            this(v, 31);
+        }
+
+        public HashCodeStats() {
+            this(0, 1);
+        }
+
+
+        public HashCodeStats merge(HashCodeStats other) {
+            return new HashCodeStats(v + m * other.v, m * other.m);
+        }
+    }
+
+    private final HashCodeStats hashCodeStats;
 
     private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, K key, V value) {
         this(left, right, keyHashCode, new Object[] { key }, new Object[] { value });
@@ -52,19 +74,15 @@ class MapNode<K, V> {
         this.keys = keys;
         this.values = values;
 
-        int hc = 0;
-        int hcm = 1;
-        hc = hcm * hashCode(left);
-        hcm *= hashCodeMul(left);
+        HashCodeStats hcs = new HashCodeStats();
+        hcs = hcs.merge(hashCodeStats(left));
+        int nhc = 0;
         for(int i = 0; i < keys.length; ++i) {
-            hc += hcm * (Objects.hashCode(keys[i]) + Objects.hashCode(values[i]));
+            nhc += (Objects.hashCode(keys[i]) + Objects.hashCode(values[i]));
         }
-        hcm *= 31;
-        hc += hcm * hashCode(right);
-        hcm *= hashCodeMul(right);
-
-        this.hashCode = hc;
-        this.hashCodeMul = hcm;
+        hcs = hcs.merge(new HashCodeStats(nhc));
+        hcs = hcs.merge(hashCodeStats(right));
+        this.hashCodeStats = hcs;
     }
 
     private static <K, V> MapNode<K, V> rotateLeft(MapNode<K, V> node) {
@@ -473,17 +491,14 @@ class MapNode<K, V> {
     }
 
     public static <K, V> int hashCode(MapNode<K, V> root) {
-        if(root == null) {
-            return 0;
-        }
-        return root.hashCode;
+        return hashCodeStats(root).v;
     }
 
-    public static <K, V> int hashCodeMul(MapNode<K, V> root) {
+    private static <K, V> HashCodeStats hashCodeStats(MapNode<K, V> root) {
         if(root == null) {
-            return 1;
+            return new HashCodeStats();
         }
-        return root.hashCodeMul;
+        return root.hashCodeStats;
     }
 
     private static <K, V> Iterator<MapNode<K, V>> nodesIterator(final MapNode<K, V> root) {
