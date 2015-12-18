@@ -8,6 +8,7 @@ import java.util.AbstractCollection;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import misc1.commons.Either;
@@ -376,63 +377,80 @@ class MapNode<K, V> {
         return Pair.of(node, null);
     }
 
-    public static <K, V> Collection<Map.Entry<K, V>> entries(final MapNode<K, V> node) {
-        if(node == null) {
-            return ImmutableList.of();
+    private static abstract class DepthFirstIterator<K, V, R> implements Iterator<R> {
+        private final Deque<Either<MapNode<K, V>, R>> pending = Lists.newLinkedList();
+
+        public DepthFirstIterator(MapNode<K, V> root) {
+            if(root != null) {
+                pending.add(Either.<MapNode<K, V>, R>left(root));
+            }
         }
+
+        @Override
+        public boolean hasNext() {
+            return !pending.isEmpty();
+        }
+
+        @Override
+        public R next() {
+            while(true) {
+                if(pending.isEmpty()) {
+                    throw new NoSuchElementException();
+                }
+                R next = pending.removeFirst().visit(new Either.Visitor<MapNode<K, V>, R, R>() {
+                    @Override
+                    public R left(MapNode<K, V> node) {
+                        if(node.right != null) {
+                            pending.addFirst(Either.<MapNode<K, V>, R>left(node.right));
+                        }
+                        ImmutableList.Builder<R> b = ImmutableList.builder();
+                        mapNode(b, node);
+                        List<R> mappedNode = b.build();
+                        for(int i = mappedNode.size() - 1; i >= 0; --i) {
+                            pending.addFirst(Either.<MapNode<K, V>, R>right(mappedNode.get(i)));
+                        }
+                        if(node.left != null) {
+                            pending.addFirst(Either.<MapNode<K, V>, R>left(node.left));
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    public R right(R r) {
+                        return r;
+                    }
+                });
+                if(next != null) {
+                    return next;
+                }
+            }
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        protected abstract void mapNode(ImmutableList.Builder<R> b, MapNode<K, V> node);
+    }
+
+    public static <K, V> Collection<Map.Entry<K, V>> entries(final MapNode<K, V> root) {
         return new AbstractCollection<Map.Entry<K, V>>() {
             @Override
             public Iterator<Map.Entry<K, V>> iterator() {
-                final Deque<Either<MapNode<K, V>, Map.Entry<K, V>>> pending = Lists.newLinkedList();
-                pending.add(Either.<MapNode<K, V>, Map.Entry<K, V>>left(node));
-                return new Iterator<Map.Entry<K, V>>() {
+                return new DepthFirstIterator<K, V, Map.Entry<K, V>>(root) {
                     @Override
-                    public boolean hasNext() {
-                        return !pending.isEmpty();
-                    }
-
-                    @Override
-                    public Map.Entry<K, V> next() {
-                        while(true) {
-                            if(pending.isEmpty()) {
-                                throw new NoSuchElementException();
-                            }
-                            Map.Entry<K, V> next = pending.removeFirst().visit(new Either.Visitor<MapNode<K, V>, Map.Entry<K, V>, Map.Entry<K, V>>() {
-                                @Override
-                                public Map.Entry<K, V> left(MapNode<K, V> node) {
-                                    if(node.right != null) {
-                                        pending.addFirst(Either.<MapNode<K, V>, Map.Entry<K, V>>left(node.right));
-                                    }
-                                    for(int i = node.keys.length - 1; i >= 0; --i) {
-                                        pending.addFirst(Either.<MapNode<K, V>, Map.Entry<K, V>>right(Maps.immutableEntry(node.key(i), node.value(i))));
-                                    }
-                                    if(node.left != null) {
-                                        pending.addFirst(Either.<MapNode<K, V>, Map.Entry<K, V>>left(node.left));
-                                    }
-                                    return null;
-                                }
-
-                                @Override
-                                public Map.Entry<K, V> right(Map.Entry<K, V> entry) {
-                                    return entry;
-                                }
-                            });
-                            if(next != null) {
-                                return next;
-                            }
+                    protected void mapNode(ImmutableList.Builder<Map.Entry<K, V>> b, MapNode<K, V> node) {
+                        for(int i = 0; i < node.keys.length; ++i) {
+                            b.add(Maps.immutableEntry(node.key(i), node.value(i)));
                         }
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException();
                     }
                 };
             }
 
             @Override
             public int size() {
-                return node.entrySize;
+                return entrySizeOf(root);
             }
         };
     }
