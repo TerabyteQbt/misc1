@@ -58,4 +58,18 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
     public static <T> ImmutableSalvagingSet<T> of() {
         return new ImmutableSalvagingSet<T>();
     }
+
+    @Override
+    public int hashCode() {
+        return MapNode.hashCode(root);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!(obj instanceof ImmutableSalvagingSet)) {
+            return false;
+        }
+        ImmutableSalvagingSet<T> other = (ImmutableSalvagingSet<T>)obj;
+        return MapNode.equals(root, other.root);
+    }
 }

@@ -78,4 +78,18 @@ public class ImmutableSalvagingMap<K, V> {
     public static <K, V> ImmutableSalvagingMap<K, V> of() {
         return (ImmutableSalvagingMap) EMPTY;
     }
+
+    @Override
+    public int hashCode() {
+        return MapNode.hashCode(root);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!(obj instanceof ImmutableSalvagingMap)) {
+            return false;
+        }
+        ImmutableSalvagingMap<K, V> other = (ImmutableSalvagingMap<K, V>)obj;
+        return MapNode.equals(root, other.root);
+    }
 }
