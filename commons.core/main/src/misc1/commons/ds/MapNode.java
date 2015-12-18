@@ -1,6 +1,7 @@
 package misc1.commons.ds;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.util.AbstractCollection;
@@ -375,12 +376,15 @@ class MapNode<K, V> {
         return Pair.of(node, null);
     }
 
-    public Collection<Map.Entry<K, V>> entries() {
+    public static <K, V> Collection<Map.Entry<K, V>> entries(final MapNode<K, V> node) {
+        if(node == null) {
+            return ImmutableList.of();
+        }
         return new AbstractCollection<Map.Entry<K, V>>() {
             @Override
             public Iterator<Map.Entry<K, V>> iterator() {
                 final Deque<Either<MapNode<K, V>, Map.Entry<K, V>>> pending = Lists.newLinkedList();
-                pending.add(Either.<MapNode<K, V>, Map.Entry<K, V>>left(MapNode.this));
+                pending.add(Either.<MapNode<K, V>, Map.Entry<K, V>>left(node));
                 return new Iterator<Map.Entry<K, V>>() {
                     @Override
                     public boolean hasNext() {
@@ -428,7 +432,7 @@ class MapNode<K, V> {
 
             @Override
             public int size() {
-                return entrySize;
+                return node.entrySize;
             }
         };
     }

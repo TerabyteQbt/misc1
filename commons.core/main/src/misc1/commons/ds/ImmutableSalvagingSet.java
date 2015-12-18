@@ -52,7 +52,7 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
     }
     @Override
     public Iterator<T> iterator() {
-        return root == null ? Iterators.<T>emptyIterator() : Iterators.transform(root.entries().iterator(), ImmutableSalvagingSet.<T>getKeyFunction());
+        return Iterators.transform(MapNode.entries(root).iterator(), ImmutableSalvagingSet.<T>getKeyFunction());
     }
 
     public static <T> ImmutableSalvagingSet<T> of() {
