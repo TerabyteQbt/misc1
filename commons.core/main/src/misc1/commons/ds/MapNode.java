@@ -486,6 +486,71 @@ class MapNode<K, V> {
         return root.hashCodeMul;
     }
 
+    private static <K, V> Iterator<MapNode<K, V>> nodesIterator(final MapNode<K, V> root) {
+        return new DepthFirstIterator<K, V, MapNode<K, V>>(root) {
+            @Override
+            protected void mapNode(ImmutableList.Builder<MapNode<K, V>> b, MapNode<K, V> node) {
+                b.add(node);
+            }
+        };
+    }
+
+    public static <K, V> boolean equals(MapNode<K, V> root1, MapNode<K, V> root2) {
+        Iterator<MapNode<K, V>> ni1 = nodesIterator(root1);
+        Iterator<MapNode<K, V>> ni2 = nodesIterator(root2);
+
+        while(true) {
+            if(ni1.hasNext()) {
+                if(ni2.hasNext()) {
+                    // great
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                if(ni2.hasNext()) {
+                    return false;
+                }
+                else {
+                    // even greater
+                    return true;
+                }
+            }
+            MapNode<K, V> n1 = ni1.next();
+            MapNode<K, V> n2 = ni2.next();
+            if(n1.keys.length != n2.keys.length) {
+                return false;
+            }
+            int sz = n1.keys.length;
+            if(!checkSubset(n1, n2, sz)) {
+                return false;
+            }
+            if(!checkSubset(n2, n1, sz)) {
+                return false;
+            }
+        }
+    }
+
+    private static <K, V> boolean checkSubset(MapNode<K, V> n1, MapNode<K, V> n2, int sz) {
+        for(int i = 0; i < sz; ++i) {
+            boolean found = false;
+            for(int j = 0; j < sz; ++j) {
+                if(Objects.equal(n1.keys[i], n2.keys[j])) {
+                    if(Objects.equal(n1.values[i], n2.values[j])) {
+                        found = true;
+                        break;
+                    }
+                    return false;
+                }
+            }
+            if(!found) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     private K key(int i) {
         return (K) keys[i];
