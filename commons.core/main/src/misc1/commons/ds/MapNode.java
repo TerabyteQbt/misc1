@@ -24,7 +24,7 @@ import org.apache.commons.lang3.tuple.Pair;
 class MapNode<K, V> {
     private final MapNode<K, V> left;
     private final MapNode<K, V> right;
-    private final int hashCode;
+    private final int keyHashCode;
     private final int nodeSize;
     private final int entrySize;
     private final boolean ok;
@@ -32,14 +32,14 @@ class MapNode<K, V> {
     private final Object[] keys;
     private final Object[] values;
 
-    private MapNode(MapNode<K, V> left, MapNode<K, V> right, int hashCode, K key, V value) {
-        this(left, right, hashCode, new Object[] { key }, new Object[] { value });
+    private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, K key, V value) {
+        this(left, right, keyHashCode, new Object[] { key }, new Object[] { value });
     }
 
-    private MapNode(MapNode<K, V> left, MapNode<K, V> right, int hashCode, Object[] keys, Object[] values) {
+    private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, Object[] keys, Object[] values) {
         this.left = left;
         this.right = right;
-        this.hashCode = hashCode;
+        this.keyHashCode = keyHashCode;
         this.nodeSize = nodeSizeOf(left) + nodeSizeOf(right) + 1;
         this.entrySize = entrySizeOf(left) + entrySizeOf(right) + keys.length;
         int hl = heightOf(left);
@@ -55,8 +55,8 @@ class MapNode<K, V> {
         if(righty == null) {
             throw new IllegalStateException();
         }
-        MapNode<K, V> newLeft = new MapNode<K, V>(node.left, righty.left, node.hashCode, node.keys, node.values);
-        return new MapNode<K, V>(newLeft, righty.right, righty.hashCode, righty.keys, righty.values);
+        MapNode<K, V> newLeft = new MapNode<K, V>(node.left, righty.left, node.keyHashCode, node.keys, node.values);
+        return new MapNode<K, V>(newLeft, righty.right, righty.keyHashCode, righty.keys, righty.values);
     }
 
     private static <K, V> MapNode<K, V> rotateRight(MapNode<K, V> node) {
@@ -64,19 +64,19 @@ class MapNode<K, V> {
         if(lefty == null) {
             throw new IllegalStateException();
         }
-        MapNode<K, V> newRight = new MapNode<K, V>(lefty.right, node.right, node.hashCode, node.keys, node.values);
-        return new MapNode<K, V>(lefty.left, newRight, lefty.hashCode, lefty.keys, lefty.values);
+        MapNode<K, V> newRight = new MapNode<K, V>(lefty.right, node.right, node.keyHashCode, node.keys, node.values);
+        return new MapNode<K, V>(lefty.left, newRight, lefty.keyHashCode, lefty.keys, lefty.values);
     }
 
     private static final class Removal<K, V> {
         public final MapNode<K, V> newRoot;
-        public final int hashCode;
+        public final int keyHashCode;
         public final Object[] removedKeys;
         public final Object[] removedValues;
 
-        public Removal(MapNode<K, V> newRoot, int hashCode, Object[] removedKeys, Object[] removedValues) {
+        public Removal(MapNode<K, V> newRoot, int keyHashCode, Object[] removedKeys, Object[] removedValues) {
             this.newRoot = newRoot;
-            this.hashCode = hashCode;
+            this.keyHashCode = keyHashCode;
             this.removedKeys = removedKeys;
             this.removedValues = removedValues;
         }
@@ -95,15 +95,15 @@ class MapNode<K, V> {
                 if(heightOf(righty.left) > heightOf(righty.right)) {
                     righty = rotateRight(righty);
                 }
-                MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.hashCode, node.keys, node.values);
-                newNode = new MapNode<K, V>(newLeft2, righty.right, righty.hashCode, righty.keys, righty.values);
+                MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.keyHashCode, node.keys, node.values);
+                newNode = new MapNode<K, V>(newLeft2, righty.right, righty.keyHashCode, righty.keys, righty.values);
             }
             else {
-                newNode = new MapNode<K, V>(newLeft, node.right, node.hashCode, node.keys, node.values);
+                newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.keys, node.values);
             }
-            return new Removal<K, V>(newNode, removed.hashCode, removed.removedKeys, removed.removedValues);
+            return new Removal<K, V>(newNode, removed.keyHashCode, removed.removedKeys, removed.removedValues);
         }
-        return new Removal<K, V>(node.right, node.hashCode, node.keys, node.values);
+        return new Removal<K, V>(node.right, node.keyHashCode, node.keys, node.values);
     }
 
     private static <K, V> Removal<K, V> removeRightNode(MapNode<K, V> node) {
@@ -119,15 +119,15 @@ class MapNode<K, V> {
                 if(heightOf(lefty.right) > heightOf(lefty.left)) {
                     lefty = rotateLeft(lefty);
                 }
-                MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.hashCode, node.keys, node.values);
-                newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.hashCode, lefty.keys, lefty.values);
+                MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.keyHashCode, node.keys, node.values);
+                newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.keyHashCode, lefty.keys, lefty.values);
             }
             else {
-                newNode = new MapNode<K, V>(node.left, newRight, node.hashCode, node.keys, node.values);
+                newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.keys, node.values);
             }
-            return new Removal<K, V>(newNode, removed.hashCode, removed.removedKeys, removed.removedValues);
+            return new Removal<K, V>(newNode, removed.keyHashCode, removed.removedKeys, removed.removedValues);
         }
-        return new Removal<K, V>(node.left, node.hashCode, node.keys, node.values);
+        return new Removal<K, V>(node.left, node.keyHashCode, node.keys, node.values);
     }
 
     private static int heightOf(MapNode<?, ?> node) {
@@ -146,12 +146,12 @@ class MapNode<K, V> {
         if(node == null) {
             return false;
         }
-        int hashCode = Objects.hashCode(key);
+        int keyHashCode = Objects.hashCode(key);
         while(node != null) {
-            if(hashCode < node.hashCode) {
+            if(keyHashCode < node.keyHashCode) {
                 node = node.left;
             }
-            else if(hashCode > node.hashCode) {
+            else if(keyHashCode > node.keyHashCode) {
                 node = node.right;
             }
             else {
@@ -185,12 +185,12 @@ class MapNode<K, V> {
     }
 
     public static <K, V> V get(MapNode<K, V> node, Object key) {
-        int hashCode = Objects.hashCode(key);
+        int keyHashCode = Objects.hashCode(key);
         while(node != null) {
-            if(hashCode < node.hashCode) {
+            if(keyHashCode < node.keyHashCode) {
                 node = node.left;
             }
-            else if(hashCode > node.hashCode) {
+            else if(keyHashCode > node.keyHashCode) {
                 node = node.right;
             }
             else {
@@ -217,12 +217,12 @@ class MapNode<K, V> {
         return r;
     }
 
-    public static <K, V> Pair<MapNode<K, V>, V> put(MapNode<K, V> node, int hashCode, K key, V value) {
+    public static <K, V> Pair<MapNode<K, V>, V> put(MapNode<K, V> node, int keyHashCode, K key, V value) {
         if(node == null) {
-            return Pair.of(new MapNode<K, V>(null, null, hashCode, key, value), null);
+            return Pair.of(new MapNode<K, V>(null, null, keyHashCode, key, value), null);
         }
-        if(hashCode < node.hashCode) {
-            Pair<MapNode<K, V>, V> pair = put(node.left, hashCode, key, value);
+        if(keyHashCode < node.keyHashCode) {
+            Pair<MapNode<K, V>, V> pair = put(node.left, keyHashCode, key, value);
             MapNode<K, V> newNode;
             if(pair.getLeft() == node.left) {
                 newNode = node;
@@ -230,22 +230,22 @@ class MapNode<K, V> {
             else {
                 MapNode<K, V> newLeft = pair.getLeft();
                 if(newLeft.height > heightOf(node.right) + 1) {
-                    if(hashCode > newLeft.hashCode) {
+                    if(keyHashCode > newLeft.keyHashCode) {
                         newLeft = rotateLeft(newLeft);
                     }
-                    MapNode<K, V> newRight = new MapNode<K, V>(newLeft.right, node.right, node.hashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(newLeft.left, newRight, newLeft.hashCode, newLeft.keys, newLeft.values);
+                    MapNode<K, V> newRight = new MapNode<K, V>(newLeft.right, node.right, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft.left, newRight, newLeft.keyHashCode, newLeft.keys, newLeft.values);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(newLeft, node.right, node.hashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.keys, node.values);
                     check(newNode);
                 }
             }
             return Pair.of(newNode, pair.getRight());
         }
-        if(hashCode > node.hashCode) {
-            Pair<MapNode<K, V>, V> pair = put(node.right, hashCode, key, value);
+        if(keyHashCode > node.keyHashCode) {
+            Pair<MapNode<K, V>, V> pair = put(node.right, keyHashCode, key, value);
             MapNode<K, V> newNode;
             if(pair.getLeft() == node.right) {
                 newNode = node;
@@ -253,15 +253,15 @@ class MapNode<K, V> {
             else {
                 MapNode<K, V> newRight = pair.getLeft();
                 if(newRight.height > heightOf(node.left) + 1) {
-                    if(hashCode < newRight.hashCode) {
+                    if(keyHashCode < newRight.keyHashCode) {
                         newRight = rotateRight(newRight);
                     }
-                    MapNode<K, V> newLeft = new MapNode<K, V>(node.left, newRight.left, node.hashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(newLeft, newRight.right, newRight.hashCode, newRight.keys, newRight.values);
+                    MapNode<K, V> newLeft = new MapNode<K, V>(node.left, newRight.left, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft, newRight.right, newRight.keyHashCode, newRight.keys, newRight.values);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(node.left, newRight, node.hashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.keys, node.values);
                     check(newNode);
                 }
             }
@@ -277,7 +277,7 @@ class MapNode<K, V> {
                 Object[] newValues = new Object[node.keys.length];
                 System.arraycopy(node.values, 0, newValues, 0, node.keys.length);
                 newValues[i] = value;
-                return Pair.of(new MapNode<K, V>(node.left, node.right, node.hashCode, newKeys, newValues), node.value(i));
+                return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, newKeys, newValues), node.value(i));
             }
         }
         Object[] newKeys = new Object[node.keys.length + 1];
@@ -286,7 +286,7 @@ class MapNode<K, V> {
         Object[] newValues = new Object[node.keys.length + 1];
         System.arraycopy(node.values, 0, newValues, 0, node.keys.length);
         newValues[node.keys.length] = value;
-        return Pair.of(new MapNode<K, V>(node.left, node.right, node.hashCode, newKeys, newValues), null);
+        return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, newKeys, newValues), null);
     }
 
     public static <K, V> Pair<MapNode<K, V>, V> remove(MapNode<K, V> node, Object key) {
@@ -295,12 +295,12 @@ class MapNode<K, V> {
         return r;
     }
 
-    public static <K, V> Pair<MapNode<K, V>, V> remove(MapNode<K, V> node, int hashCode, Object key) {
+    public static <K, V> Pair<MapNode<K, V>, V> remove(MapNode<K, V> node, int keyHashCode, Object key) {
         if(node == null) {
             return Pair.of(null, null);
         }
-        if(hashCode < node.hashCode) {
-            Pair<MapNode<K, V>, V> pair = remove(node.left, hashCode, key);
+        if(keyHashCode < node.keyHashCode) {
+            Pair<MapNode<K, V>, V> pair = remove(node.left, keyHashCode, key);
             MapNode<K, V> newNode;
             if(pair.getLeft() == node.left) {
                 newNode = node;
@@ -312,19 +312,19 @@ class MapNode<K, V> {
                     if(heightOf(righty.left) > heightOf(righty.right)) {
                         righty = rotateRight(righty);
                     }
-                    MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.hashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(newLeft2, righty.right, righty.hashCode, righty.keys, righty.values);
+                    MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft2, righty.right, righty.keyHashCode, righty.keys, righty.values);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(newLeft, node.right, node.hashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.keys, node.values);
                     check(newNode);
                 }
             }
             return Pair.of(newNode, pair.getRight());
         }
-        if(hashCode > node.hashCode) {
-            Pair<MapNode<K, V>, V> pair = remove(node.right, hashCode, key);
+        if(keyHashCode > node.keyHashCode) {
+            Pair<MapNode<K, V>, V> pair = remove(node.right, keyHashCode, key);
             MapNode<K, V> newNode;
             if(pair.getLeft() == node.right) {
                 newNode = node;
@@ -336,12 +336,12 @@ class MapNode<K, V> {
                     if(heightOf(lefty.right) > heightOf(lefty.left)) {
                         lefty = rotateLeft(lefty);
                     }
-                    MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.hashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.hashCode, lefty.keys, lefty.values);
+                    MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.keyHashCode, lefty.keys, lefty.values);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(node.left, newRight, node.hashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.keys, node.values);
                     check(newNode);
                 }
             }
@@ -353,7 +353,7 @@ class MapNode<K, V> {
                 if(node.keys.length == 1) {
                     if(nodeSizeOf(node.right) > nodeSizeOf(node.left)) {
                         Removal<K, V> removed = removeLeftNode(node.right);
-                        return Pair.of(new MapNode<K, V>(node.left, removed.newRoot, removed.hashCode, removed.removedKeys, removed.removedValues), value);
+                        return Pair.of(new MapNode<K, V>(node.left, removed.newRoot, removed.keyHashCode, removed.removedKeys, removed.removedValues), value);
                     }
                     else {
                         if(node.left == null) {
@@ -361,7 +361,7 @@ class MapNode<K, V> {
                         }
                         else {
                             Removal<K, V> removed = removeRightNode(node.left);
-                            return Pair.of(new MapNode<K, V>(removed.newRoot, node.right, removed.hashCode, removed.removedKeys, removed.removedValues), value);
+                            return Pair.of(new MapNode<K, V>(removed.newRoot, node.right, removed.keyHashCode, removed.removedKeys, removed.removedValues), value);
                         }
                     }
                 }
@@ -371,7 +371,7 @@ class MapNode<K, V> {
                 Object[] newValues = new Object[node.keys.length - 1];
                 System.arraycopy(node.values, 0, newValues, 0, i);
                 System.arraycopy(node.values, i + 1, newValues, i, node.keys.length - i - 1);
-                return Pair.of(new MapNode<K, V>(node.left, node.right, node.hashCode, newKeys, newValues), value);
+                return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, newKeys, newValues), value);
             }
         }
         return Pair.of(node, null);
