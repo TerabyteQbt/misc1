@@ -32,6 +32,9 @@ class MapNode<K, V> {
     private final Object[] keys;
     private final Object[] values;
 
+    private final int hashCode;
+    private final int hashCodeMul;
+
     private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, K key, V value) {
         this(left, right, keyHashCode, new Object[] { key }, new Object[] { value });
     }
@@ -48,6 +51,20 @@ class MapNode<K, V> {
         this.height = Math.max(hl, hr) + 1;
         this.keys = keys;
         this.values = values;
+
+        int hc = 0;
+        int hcm = 1;
+        hc = hcm * hashCode(left);
+        hcm *= hashCodeMul(left);
+        for(int i = 0; i < keys.length; ++i) {
+            hc += hcm * (Objects.hashCode(keys[i]) + Objects.hashCode(values[i]));
+        }
+        hcm *= 31;
+        hc += hcm * hashCode(right);
+        hcm *= hashCodeMul(right);
+
+        this.hashCode = hc;
+        this.hashCodeMul = hcm;
     }
 
     private static <K, V> MapNode<K, V> rotateLeft(MapNode<K, V> node) {
@@ -453,6 +470,20 @@ class MapNode<K, V> {
                 return entrySizeOf(root);
             }
         };
+    }
+
+    public static <K, V> int hashCode(MapNode<K, V> root) {
+        if(root == null) {
+            return 0;
+        }
+        return root.hashCode;
+    }
+
+    public static <K, V> int hashCodeMul(MapNode<K, V> root) {
+        if(root == null) {
+            return 1;
+        }
+        return root.hashCodeMul;
     }
 
     @SuppressWarnings("unchecked")
