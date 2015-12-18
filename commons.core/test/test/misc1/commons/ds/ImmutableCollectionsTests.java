@@ -1,9 +1,11 @@
 package misc1.commons.ds;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -141,6 +143,72 @@ public class ImmutableCollectionsTests {
                     break;
                 }
             }
+        }
+    }
+
+    @Test
+    public void testMapHceSimple() {
+        ImmutableList.Builder<ImmutableSalvagingMap<Key, String>> b = ImmutableList.builder();
+        b.add(ImmutableSalvagingMap.<Key, String>of());
+        b.add(ImmutableSalvagingMap.<Key, String>of().simplePut(new Key(0, 0), "a"));
+        b.add(ImmutableSalvagingMap.<Key, String>of().simplePut(new Key(0, 0), "a").simplePut(new Key(0, 1), "b"));
+        b.add(ImmutableSalvagingMap.<Key, String>of().simplePut(new Key(0, 0), "a").simplePut(new Key(1, 0), "c"));
+        b.add(ImmutableSalvagingMap.<Key, String>of().simplePut(new Key(0, 0), "b"));
+        ImmutableList<ImmutableSalvagingMap<Key, String>> ms = b.build();
+
+        for(int i = 0; i < ms.size(); ++i) {
+            for(int j = 0; j < i; ++j) {
+                Assert.assertNotEquals(ms.get(i), ms.get(j));
+                Assert.assertNotEquals(ms.get(j), ms.get(i));
+            }
+        }
+        for(int i = 0; i < ms.size(); ++i) {
+            Assert.assertEquals(ms.get(i), ms.get(i));
+        }
+    }
+
+    @Test
+    public void testMapHceBig() {
+        List<Key> allKeys = Lists.newArrayList();
+        for(int a = 0; a < MAX_A; ++a) {
+            for(int b = 0; b < MAX_B; ++b) {
+                allKeys.add(new Key(a, b));
+                allKeys.add(new Key(a, b));
+            }
+        }
+        allKeys.add(null);
+
+        Random r = new Random(0x1234);
+        for(int reps = 0; reps < MAX_REPS; ++reps) {
+            int sz = 10;
+
+            List<Pair<Key, Key>> entries = Lists.newArrayList();
+            Set<Key> keys = Sets.newHashSet();
+            for(int i = 0; i < sz; ++i) {
+                Key k;
+                do {
+                    k = allKeys.get(r.nextInt(allKeys.size()));
+                }
+                while(!keys.add(k));
+                Key v = allKeys.get(r.nextInt(allKeys.size()));
+                entries.add(Pair.of(k, v));
+            }
+
+            Collections.shuffle(entries, r);
+            ImmutableSalvagingMap<Key, Key> m1 = ImmutableSalvagingMap.<Key, Key>of();
+            for(Pair<Key, Key> e : entries) {
+                m1 = m1.simplePut(e.getKey(), e.getValue());
+            }
+
+            Collections.shuffle(entries, r);
+            ImmutableSalvagingMap<Key, Key> m2 = ImmutableSalvagingMap.<Key, Key>of();
+            for(Pair<Key, Key> e : entries) {
+                m2 = m2.simplePut(e.getKey(), e.getValue());
+            }
+
+            Assert.assertEquals(m1.hashCode(), m2.hashCode());
+            Assert.assertEquals(m1, m2);
+            Assert.assertEquals(m2, m1);
         }
     }
 
