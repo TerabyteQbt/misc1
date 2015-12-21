@@ -339,7 +339,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             rmb.with(packageName, createPackageManifest(dependencyEdges, module, packageName));
         }
         QbtManifest.Builder newManifest = manifest.builder();
-        newManifest.with(destinationRepo, rmb.build());
+        newManifest = newManifest.with(destinationRepo, rmb);
         manifestResult.deparse(newManifest.build());
 
         return 0;
