@@ -1,6 +1,6 @@
 package misc1.commons.ds;
 
-public abstract class StructBuilder<S, B> {
+public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
     private final StructType<S, B> type;
     private ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map;
 

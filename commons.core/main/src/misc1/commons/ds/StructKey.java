@@ -1,6 +1,8 @@
 package misc1.commons.ds;
 
 import com.google.common.base.Optional;
+import misc1.commons.merge.Merge;
+import misc1.commons.merge.Merges;
 
 public abstract class StructKey<S, VS, VB> {
     private final String name;
@@ -27,4 +29,8 @@ public abstract class StructKey<S, VS, VB> {
 
     public abstract VS toStruct(VB vb);
     public abstract VB toBuilder(VS vs);
+
+    public Merge<VS> merge() {
+        return Merges.trivial();
+    }
 }

@@ -3,7 +3,7 @@ package misc1.commons.ds;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
-public class MapStructBuilder<S, B, K, VS, VB> {
+public class MapStructBuilder<S extends MapStruct<S, B, K, VS, VB>, B, K, VS, VB> {
     private final MapStructType<S, B, K, VS, VB> type;
     private final ImmutableSalvagingMap<K, VB> map;
 
