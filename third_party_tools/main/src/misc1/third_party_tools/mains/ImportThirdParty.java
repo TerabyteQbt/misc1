@@ -348,18 +348,18 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
     private PackageManifest.Builder createPackageManifest(Multimap<PackageTip, PackageTip> dependencyEdges, IvyModuleAndVersion module, String packageName) {
         String packagePath = getPackagePathFromModule(module);
         LOGGER.debug("Building package manifest for module " + module + " (" + packageName + ")");
-        PackageManifest.Builder pmb = PackageManifest.emptyBuilder();
-        pmb.withMetadata(PackageMetadataType.ARCH_INDEPENDENT, true);
-        pmb.withMetadata(PackageMetadataType.PREFIX, Maybe.of(packagePath));
+        PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
+        pmb = pmb.withMetadata(PackageMetadataType.ARCH_INDEPENDENT, true);
+        pmb = pmb.withMetadata(PackageMetadataType.PREFIX, Maybe.of(packagePath));
 
         // add deps
         PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
         for(PackageTip dep : dependencyEdges.get(pt)) {
             LOGGER.debug("Package " + pt + " depends upon " + dep);
-            pmb.withNormalDep(dep, NormalDependencyType.STRONG);
+            pmb = pmb.withNormalDep(dep, NormalDependencyType.STRONG);
         }
         // add link checker by default - our default script uses it
-        pmb.withNormalDep(PackageTip.TYPE.parseRequire("qbt_fringe.link_checker.release"), NormalDependencyType.BUILDTIME_WEAK);
+        pmb = pmb.withNormalDep(PackageTip.TYPE.parseRequire("qbt_fringe.link_checker.release"), NormalDependencyType.BUILDTIME_WEAK);
 
         return pmb;
     }
