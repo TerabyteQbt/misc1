@@ -13,6 +13,13 @@ public abstract class StructBuilder<S, B> {
         return type.createBuilder(map.simplePut(k, vb));
     }
 
+    public <VB> VB get(StructKey<S, ?, VB> k) {
+        if(map.containsKey(k)) {
+            return (VB)map.get(k);
+        }
+        return k.getDefault().get();
+    }
+
     public S build() {
         return type.create(map);
     }
