@@ -327,16 +327,16 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             return 0;
         }
         // Update the manifest
-        RepoManifest.Builder rmb = RepoManifest.builder(vcsRepo.getCurrentCommit());
+        RepoManifest.Builder rmb = RepoManifest.TYPE.builder().set(RepoManifest.VERSION, vcsRepo.getCurrentCommit());
         for(Map.Entry<String, PackageManifest> old : manifest.repos.get(destinationRepo).packages.entrySet()) {
             if(modifiedPackages.contains(old.getKey())) {
                 continue;
             }
-            rmb.with(old.getKey(), old.getValue());
+            rmb = rmb.with(old.getKey(), old.getValue().builder());
         }
         for(IvyModuleAndVersion module : modifiedModules) {
             String packageName = getPackageFromModule(module);
-            rmb.with(packageName, createPackageManifest(dependencyEdges, module, packageName));
+            rmb = rmb.with(packageName, createPackageManifest(dependencyEdges, module, packageName));
         }
         QbtManifest.Builder newManifest = manifest.builder();
         newManifest = newManifest.with(destinationRepo, rmb);
@@ -345,7 +345,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         return 0;
     }
 
-    private PackageManifest createPackageManifest(Multimap<PackageTip, PackageTip> dependencyEdges, IvyModuleAndVersion module, String packageName) {
+    private PackageManifest.Builder createPackageManifest(Multimap<PackageTip, PackageTip> dependencyEdges, IvyModuleAndVersion module, String packageName) {
         String packagePath = getPackagePathFromModule(module);
         LOGGER.debug("Building package manifest for module " + module + " (" + packageName + ")");
         PackageManifest.Builder pmb = PackageManifest.emptyBuilder();
@@ -361,8 +361,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         // add link checker by default - our default script uses it
         pmb.withNormalDep(PackageTip.TYPE.parseRequire("qbt_fringe.link_checker.release"), NormalDependencyType.BUILDTIME_WEAK);
 
-        PackageManifest pm = pmb.build();
-        return pm;
+        return pmb;
     }
 
     private static ImmutableList<String> getMetadata(IvyModuleAndVersion module, final Path newPackagePath) throws IOException {
