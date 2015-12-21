@@ -2,6 +2,7 @@ package misc1.commons.ds;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
 import java.util.Map;
 import org.apache.commons.lang3.tuple.Pair;
@@ -59,6 +60,14 @@ public class ImmutableSalvagingMap<K, V> {
         return MapNode.entries(root);
     }
 
+    public ImmutableMap<K, V> toMap() {
+        ImmutableMap.Builder<K, V> b = ImmutableMap.builder();
+        for(Map.Entry<K, V> e : entries()) {
+            b.put(e);
+        }
+        return b.build();
+    }
+
     private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = new Function<Map.Entry<Object, Object>, Object>() {
         @Override
         public Object apply(Map.Entry<Object, Object> input) {
@@ -77,6 +86,14 @@ public class ImmutableSalvagingMap<K, V> {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static <K, V> ImmutableSalvagingMap<K, V> of() {
         return (ImmutableSalvagingMap) EMPTY;
+    }
+
+    public static <K, V> ImmutableSalvagingMap<K, V> copyOf(ImmutableMap<K, V> map) {
+        ImmutableSalvagingMap<K, V> r = of();
+        for(Map.Entry<K, V> e : map.entrySet()) {
+            r = r.simplePut(e.getKey(), e.getValue());
+        }
+        return r;
     }
 
     @Override
