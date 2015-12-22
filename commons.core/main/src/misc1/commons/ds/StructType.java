@@ -2,36 +2,46 @@ package misc1.commons.ds;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import misc1.commons.ds.ImmutableSalvagingMap;
 
-public abstract class StructType<S> {
-    private final ImmutableList<StructKey<S, ?>> keys;
+public abstract class StructType<S, B> {
+    private final ImmutableList<StructKey<S, ?, ?>> keys;
 
-    public StructType(Iterable<StructKey<S, ?>> keys) {
+    public StructType(Iterable<StructKey<S, ?, ?>> keys) {
         this.keys = ImmutableList.copyOf(keys);
     }
 
-    public StructBuilder<S> builder() {
-        return new StructBuilder<S>(this);
+    public B builder() {
+        return createBuilder(ImmutableSalvagingMap.<StructKey<S, ?, ?>, Object>of());
     }
 
-    public S build(ImmutableSalvagingMap<StructKey<S, ?>, Object> map) {
-        for(StructKey<S, ?> k : map.keys()) {
+    public final S create(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map) {
+        for(StructKey<S, ?, ?> k : map.keys()) {
             if(!keys.contains(k)) {
                 throw new IllegalArgumentException("Nonsense keys: " + k);
             }
         }
-        for(StructKey<S, ?> k : keys) {
-            Object v = map.get(k);
-            if(v == null) {
-                Optional<?> mv = k.getDefault();
-                if(!mv.isPresent()) {
-                    throw new IllegalArgumentException("Key required: " + k);
-                }
-                map = map.simplePut(k, mv.get());
-            }
+        ImmutableMap.Builder<StructKey<S, ?, ?>, Object> b = ImmutableMap.builder();
+        for(StructKey<S, ?, ?> k : keys) {
+            copyKey(b, map, k);
         }
-        return create(map);
+        return createUnchecked(b.build());
     }
 
-    protected abstract S create(ImmutableSalvagingMap<StructKey<S, ?>, Object> map);
+    private static <S, VS, VB> void copyKey(ImmutableMap.Builder<StructKey<S, ?, ?>, Object> b, ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map, StructKey<S, VS, VB> k) {
+        VB vb = (VB)map.get(k);
+        if(vb == null) {
+            Optional<VB> mv = k.getDefault();
+            if(!mv.isPresent()) {
+                throw new IllegalArgumentException("Key required: " + k);
+            }
+            vb = mv.get();
+        }
+        VS vs = k.toStruct(vb);
+        b.put(k, vs);
+    }
+
+    protected abstract S createUnchecked(ImmutableMap<StructKey<S, ?, ?>, Object> map);
+    protected abstract B createBuilder(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map);
 }

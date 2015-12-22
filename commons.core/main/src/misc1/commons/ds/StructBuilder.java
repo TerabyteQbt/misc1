@@ -1,19 +1,19 @@
 package misc1.commons.ds;
 
-public class StructBuilder<S> {
-    private final StructType<S> type;
-    private ImmutableSalvagingMap<StructKey<S, ?>, Object> map = ImmutableSalvagingMap.of();
+public abstract class StructBuilder<S, B> {
+    private final StructType<S, B> type;
+    private ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map;
 
-    public StructBuilder(StructType<S> type) {
+    protected StructBuilder(StructType<S, B> type, ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map) {
         this.type = type;
+        this.map = map;
     }
 
-    public <V> StructBuilder<S> set(StructKey<S, V> k, V v) {
-        map = map.simplePut(k, k.onSet(v));
-        return this;
+    public <VB> B set(StructKey<S, ?, VB> k, VB vb) {
+        return type.createBuilder(map.simplePut(k, vb));
     }
 
     public S build() {
-        return type.build(map);
+        return type.create(map);
     }
 }

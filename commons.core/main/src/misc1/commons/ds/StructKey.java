@@ -2,34 +2,29 @@ package misc1.commons.ds;
 
 import com.google.common.base.Optional;
 
-public class StructKey<S, V> {
+public abstract class StructKey<S, VS, VB> {
     private final String name;
-    private final Optional<V> def;
+    private final Optional<VB> def;
 
     public StructKey(String name) {
         this.name = name;
         this.def = Optional.absent();
     }
 
-    public StructKey(String name, V v) {
+    public StructKey(String name, VB vb) {
         this.name = name;
-        this.def = Optional.of(v);
+        this.def = Optional.of(vb);
     }
 
-    public Optional<V> getDefault() {
+    public Optional<VB> getDefault() {
         return def;
-    }
-
-    public V onGet(V v) {
-        return v;
-    }
-
-    public V onSet(V v) {
-        return v;
     }
 
     @Override
     public String toString() {
         return name;
     }
+
+    public abstract VS toStruct(VB vb);
+    public abstract VB toBuilder(VS vs);
 }
