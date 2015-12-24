@@ -88,7 +88,7 @@ public class ImmutableSalvagingMap<K, V> {
         return (ImmutableSalvagingMap) EMPTY;
     }
 
-    public static <K, V> ImmutableSalvagingMap<K, V> copyOf(ImmutableMap<K, V> map) {
+    public static <K, V> ImmutableSalvagingMap<K, V> copyOf(Map<K, V> map) {
         ImmutableSalvagingMap<K, V> r = of();
         for(Map.Entry<K, V> e : map.entrySet()) {
             r = r.simplePut(e.getKey(), e.getValue());
