@@ -7,10 +7,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import misc1.commons.ExceptionUtils;
 import misc1.commons.Result;
 
-public abstract class ComputationTreeComputer {
+public final class ComputationTreeComputer {
+    private final Executor e;
+
+    public ComputationTreeComputer(Executor e) {
+        this.e = e;
+    }
+
     private enum StatusStatus {
         UNSTARTED,
         STARTED,
@@ -48,7 +55,7 @@ public abstract class ComputationTreeComputer {
                 }
             }
             final ImmutableList<Result<Object>> childrenResults = childrenResultsBuilder.build();
-            submit(new Runnable() {
+            e.execute(new Runnable() {
                 @Override
                 public void run() {
                     complete(Result.newFromCallable(new Callable<Object>() {
@@ -92,7 +99,7 @@ public abstract class ComputationTreeComputer {
     private final Map<ComputationTree<?>, Status> statuses = Maps.newIdentityHashMap();
 
     private void submitCheck(final Status status) {
-        submit(new Runnable() {
+        e.execute(new Runnable() {
             @Override
             public void run() {
                 status.checkStart();
@@ -144,6 +151,4 @@ public abstract class ComputationTreeComputer {
             throw ExceptionUtils.commute(e);
         }
     }
-
-    protected abstract void submit(Runnable r);
 }
