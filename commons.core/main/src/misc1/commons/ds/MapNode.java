@@ -29,8 +29,7 @@ class MapNode<K, V> {
     private final int entrySize;
     private final boolean ok;
     private final int height;
-    private final Object[] keys;
-    private final Object[] values;
+    private final ImmutableList<Map.Entry<K, V>> entries;
 
     private static class HashCodeStats {
         public final int v;
@@ -58,27 +57,26 @@ class MapNode<K, V> {
     private final HashCodeStats hashCodeStats;
 
     private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, K key, V value) {
-        this(left, right, keyHashCode, new Object[] { key }, new Object[] { value });
+        this(left, right, keyHashCode, ImmutableList.of(Maps.immutableEntry(key, value)));
     }
 
-    private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, Object[] keys, Object[] values) {
+    private MapNode(MapNode<K, V> left, MapNode<K, V> right, int keyHashCode, ImmutableList<Map.Entry<K, V>> entries) {
         this.left = left;
         this.right = right;
         this.keyHashCode = keyHashCode;
         this.nodeSize = nodeSizeOf(left) + nodeSizeOf(right) + 1;
-        this.entrySize = entrySizeOf(left) + entrySizeOf(right) + keys.length;
+        this.entrySize = entrySizeOf(left) + entrySizeOf(right) + entries.size();
         int hl = heightOf(left);
         int hr = heightOf(right);
         this.ok = (left == null || left.ok) && (right == null || right.ok) && (hl <= hr + 1) && (hr <= hl + 1);
         this.height = Math.max(hl, hr) + 1;
-        this.keys = keys;
-        this.values = values;
+        this.entries = entries;
 
         HashCodeStats hcs = new HashCodeStats();
         hcs = hcs.merge(hashCodeStats(left));
         int nhc = 0;
-        for(int i = 0; i < keys.length; ++i) {
-            nhc += (Objects.hashCode(keys[i]) + Objects.hashCode(values[i]));
+        for(Map.Entry<K, V> e : entries) {
+            nhc += Objects.hashCode(e.getKey()) + Objects.hashCode(e.getValue());
         }
         hcs = hcs.merge(new HashCodeStats(nhc));
         hcs = hcs.merge(hashCodeStats(right));
@@ -90,8 +88,8 @@ class MapNode<K, V> {
         if(righty == null) {
             throw new IllegalStateException();
         }
-        MapNode<K, V> newLeft = new MapNode<K, V>(node.left, righty.left, node.keyHashCode, node.keys, node.values);
-        return new MapNode<K, V>(newLeft, righty.right, righty.keyHashCode, righty.keys, righty.values);
+        MapNode<K, V> newLeft = new MapNode<K, V>(node.left, righty.left, node.keyHashCode, node.entries);
+        return new MapNode<K, V>(newLeft, righty.right, righty.keyHashCode, righty.entries);
     }
 
     private static <K, V> MapNode<K, V> rotateRight(MapNode<K, V> node) {
@@ -99,21 +97,19 @@ class MapNode<K, V> {
         if(lefty == null) {
             throw new IllegalStateException();
         }
-        MapNode<K, V> newRight = new MapNode<K, V>(lefty.right, node.right, node.keyHashCode, node.keys, node.values);
-        return new MapNode<K, V>(lefty.left, newRight, lefty.keyHashCode, lefty.keys, lefty.values);
+        MapNode<K, V> newRight = new MapNode<K, V>(lefty.right, node.right, node.keyHashCode, node.entries);
+        return new MapNode<K, V>(lefty.left, newRight, lefty.keyHashCode, lefty.entries);
     }
 
     private static final class Removal<K, V> {
         public final MapNode<K, V> newRoot;
         public final int keyHashCode;
-        public final Object[] removedKeys;
-        public final Object[] removedValues;
+        public final ImmutableList<Map.Entry<K, V>> removedEntries;
 
-        public Removal(MapNode<K, V> newRoot, int keyHashCode, Object[] removedKeys, Object[] removedValues) {
+        public Removal(MapNode<K, V> newRoot, int keyHashCode, ImmutableList<Map.Entry<K, V>> removedEntries) {
             this.newRoot = newRoot;
             this.keyHashCode = keyHashCode;
-            this.removedKeys = removedKeys;
-            this.removedValues = removedValues;
+            this.removedEntries = removedEntries;
         }
     }
 
@@ -130,15 +126,15 @@ class MapNode<K, V> {
                 if(heightOf(righty.left) > heightOf(righty.right)) {
                     righty = rotateRight(righty);
                 }
-                MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.keyHashCode, node.keys, node.values);
-                newNode = new MapNode<K, V>(newLeft2, righty.right, righty.keyHashCode, righty.keys, righty.values);
+                MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.keyHashCode, node.entries);
+                newNode = new MapNode<K, V>(newLeft2, righty.right, righty.keyHashCode, righty.entries);
             }
             else {
-                newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.keys, node.values);
+                newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.entries);
             }
-            return new Removal<K, V>(newNode, removed.keyHashCode, removed.removedKeys, removed.removedValues);
+            return new Removal<K, V>(newNode, removed.keyHashCode, removed.removedEntries);
         }
-        return new Removal<K, V>(node.right, node.keyHashCode, node.keys, node.values);
+        return new Removal<K, V>(node.right, node.keyHashCode, node.entries);
     }
 
     private static <K, V> Removal<K, V> removeRightNode(MapNode<K, V> node) {
@@ -154,15 +150,15 @@ class MapNode<K, V> {
                 if(heightOf(lefty.right) > heightOf(lefty.left)) {
                     lefty = rotateLeft(lefty);
                 }
-                MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.keyHashCode, node.keys, node.values);
-                newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.keyHashCode, lefty.keys, lefty.values);
+                MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.keyHashCode, node.entries);
+                newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.keyHashCode, lefty.entries);
             }
             else {
-                newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.keys, node.values);
+                newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.entries);
             }
-            return new Removal<K, V>(newNode, removed.keyHashCode, removed.removedKeys, removed.removedValues);
+            return new Removal<K, V>(newNode, removed.keyHashCode, removed.removedEntries);
         }
-        return new Removal<K, V>(node.left, node.keyHashCode, node.keys, node.values);
+        return new Removal<K, V>(node.left, node.keyHashCode, node.entries);
     }
 
     private static int heightOf(MapNode<?, ?> node) {
@@ -177,7 +173,7 @@ class MapNode<K, V> {
         return node == null ? 0 : node.entrySize;
     }
 
-    public static boolean containsKey(MapNode<?, ?> node, Object key) {
+    public static <K, V> boolean containsKey(MapNode<K, V> node, K key) {
         if(node == null) {
             return false;
         }
@@ -190,8 +186,8 @@ class MapNode<K, V> {
                 node = node.right;
             }
             else {
-                for(int i = 0; i < node.keys.length; ++i) {
-                    if(Objects.equal(node.keys[i], key)) {
+                for(Map.Entry<K, V> e : node.entries) {
+                    if(Objects.equal(e.getKey(), key)) {
                         return true;
                     }
                 }
@@ -201,12 +197,12 @@ class MapNode<K, V> {
         return false;
     }
 
-    public static boolean containsValue(MapNode<?, ?> node, Object value) {
+    public static <K, V> boolean containsValue(MapNode<K, V> node, V value) {
         if(node == null) {
             return false;
         }
-        for(int i = 0; i < node.keys.length; ++i) {
-            if(Objects.equal(node.values[i], value)) {
+        for(Map.Entry<K, V> e : node.entries) {
+            if(Objects.equal(e.getValue(), value)) {
                 return true;
             }
         }
@@ -229,9 +225,9 @@ class MapNode<K, V> {
                 node = node.right;
             }
             else {
-                for(int i = 0; i < node.keys.length; ++i) {
-                    if(Objects.equal(node.keys[i], key)) {
-                        return node.value(i);
+                for(Map.Entry<K, V> e : node.entries) {
+                    if(Objects.equal(e.getKey(), key)) {
+                        return e.getValue();
                     }
                 }
                 return null;
@@ -268,12 +264,12 @@ class MapNode<K, V> {
                     if(keyHashCode > newLeft.keyHashCode) {
                         newLeft = rotateLeft(newLeft);
                     }
-                    MapNode<K, V> newRight = new MapNode<K, V>(newLeft.right, node.right, node.keyHashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(newLeft.left, newRight, newLeft.keyHashCode, newLeft.keys, newLeft.values);
+                    MapNode<K, V> newRight = new MapNode<K, V>(newLeft.right, node.right, node.keyHashCode, node.entries);
+                    newNode = new MapNode<K, V>(newLeft.left, newRight, newLeft.keyHashCode, newLeft.entries);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.entries);
                     check(newNode);
                 }
             }
@@ -291,37 +287,34 @@ class MapNode<K, V> {
                     if(keyHashCode < newRight.keyHashCode) {
                         newRight = rotateRight(newRight);
                     }
-                    MapNode<K, V> newLeft = new MapNode<K, V>(node.left, newRight.left, node.keyHashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(newLeft, newRight.right, newRight.keyHashCode, newRight.keys, newRight.values);
+                    MapNode<K, V> newLeft = new MapNode<K, V>(node.left, newRight.left, node.keyHashCode, node.entries);
+                    newNode = new MapNode<K, V>(newLeft, newRight.right, newRight.keyHashCode, newRight.entries);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.entries);
                     check(newNode);
                 }
             }
             return Pair.of(newNode, pair.getRight());
         }
-        for(int i = 0; i < node.keys.length; ++i) {
-            if(Objects.equal(node.keys[i], key)) {
-                if(node.values[i] == value) {
+        for(int i = 0; i < node.entries.size(); ++i) {
+            Map.Entry<K, V> e = node.entries.get(i);
+            if(Objects.equal(e.getKey(), key)) {
+                if(e.getValue() == value) {
                     return Pair.of(node, value);
                 }
-                Object[] newKeys = new Object[node.keys.length];
-                System.arraycopy(node.keys, 0, newKeys, 0, node.keys.length);
-                Object[] newValues = new Object[node.keys.length];
-                System.arraycopy(node.values, 0, newValues, 0, node.keys.length);
-                newValues[i] = value;
-                return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, newKeys, newValues), node.value(i));
+                ImmutableList.Builder<Map.Entry<K, V>> b = ImmutableList.builder();
+                b.addAll(node.entries.subList(0, i));
+                b.add(Maps.immutableEntry(key, value));
+                b.addAll(node.entries.subList(i + 1, node.entries.size()));
+                return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, b.build()), e.getValue());
             }
         }
-        Object[] newKeys = new Object[node.keys.length + 1];
-        System.arraycopy(node.keys, 0, newKeys, 0, node.keys.length);
-        newKeys[node.keys.length] = key;
-        Object[] newValues = new Object[node.keys.length + 1];
-        System.arraycopy(node.values, 0, newValues, 0, node.keys.length);
-        newValues[node.keys.length] = value;
-        return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, newKeys, newValues), null);
+        ImmutableList.Builder<Map.Entry<K, V>> b = ImmutableList.builder();
+        b.addAll(node.entries);
+        b.add(Maps.immutableEntry(key, value));
+        return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, b.build()), null);
     }
 
     public static <K, V> Pair<MapNode<K, V>, V> remove(MapNode<K, V> node, Object key) {
@@ -347,12 +340,12 @@ class MapNode<K, V> {
                     if(heightOf(righty.left) > heightOf(righty.right)) {
                         righty = rotateRight(righty);
                     }
-                    MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.keyHashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(newLeft2, righty.right, righty.keyHashCode, righty.keys, righty.values);
+                    MapNode<K, V> newLeft2 = new MapNode<K, V>(newLeft, righty.left, node.keyHashCode, node.entries);
+                    newNode = new MapNode<K, V>(newLeft2, righty.right, righty.keyHashCode, righty.entries);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(newLeft, node.right, node.keyHashCode, node.entries);
                     check(newNode);
                 }
             }
@@ -371,24 +364,25 @@ class MapNode<K, V> {
                     if(heightOf(lefty.right) > heightOf(lefty.left)) {
                         lefty = rotateLeft(lefty);
                     }
-                    MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.keyHashCode, node.keys, node.values);
-                    newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.keyHashCode, lefty.keys, lefty.values);
+                    MapNode<K, V> newRight2 = new MapNode<K, V>(lefty.right, newRight, node.keyHashCode, node.entries);
+                    newNode = new MapNode<K, V>(lefty.left, newRight2, lefty.keyHashCode, lefty.entries);
                     check(newNode);
                 }
                 else {
-                    newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.keys, node.values);
+                    newNode = new MapNode<K, V>(node.left, newRight, node.keyHashCode, node.entries);
                     check(newNode);
                 }
             }
             return Pair.of(newNode, pair.getRight());
         }
-        for(int i = 0; i < node.keys.length; ++i) {
-            if(Objects.equal(node.keys[i], key)) {
-                V value = node.value(i);
-                if(node.keys.length == 1) {
+        for(int i = 0; i < node.entries.size(); ++i) {
+            Map.Entry<K, V> e = node.entries.get(i);
+            if(Objects.equal(e.getKey(), key)) {
+                V value = e.getValue();
+                if(node.entries.size() == 1) {
                     if(nodeSizeOf(node.right) > nodeSizeOf(node.left)) {
                         Removal<K, V> removed = removeLeftNode(node.right);
-                        return Pair.of(new MapNode<K, V>(node.left, removed.newRoot, removed.keyHashCode, removed.removedKeys, removed.removedValues), value);
+                        return Pair.of(new MapNode<K, V>(node.left, removed.newRoot, removed.keyHashCode, removed.removedEntries), value);
                     }
                     else {
                         if(node.left == null) {
@@ -396,17 +390,14 @@ class MapNode<K, V> {
                         }
                         else {
                             Removal<K, V> removed = removeRightNode(node.left);
-                            return Pair.of(new MapNode<K, V>(removed.newRoot, node.right, removed.keyHashCode, removed.removedKeys, removed.removedValues), value);
+                            return Pair.of(new MapNode<K, V>(removed.newRoot, node.right, removed.keyHashCode, removed.removedEntries), value);
                         }
                     }
                 }
-                Object[] newKeys = new Object[node.keys.length - 1];
-                System.arraycopy(node.keys, 0, newKeys, 0, i);
-                System.arraycopy(node.keys, i + 1, newKeys, i, node.keys.length - i - 1);
-                Object[] newValues = new Object[node.keys.length - 1];
-                System.arraycopy(node.values, 0, newValues, 0, i);
-                System.arraycopy(node.values, i + 1, newValues, i, node.keys.length - i - 1);
-                return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, newKeys, newValues), value);
+                ImmutableList.Builder<Map.Entry<K, V>> b = ImmutableList.builder();
+                b.addAll(node.entries.subList(0, i));
+                b.addAll(node.entries.subList(i + 1, node.entries.size()));
+                return Pair.of(new MapNode<K, V>(node.left, node.right, node.keyHashCode, b.build()), value);
             }
         }
         return Pair.of(node, null);
@@ -476,9 +467,7 @@ class MapNode<K, V> {
                 return new DepthFirstIterator<K, V, Map.Entry<K, V>>(root) {
                     @Override
                     protected void mapNode(ImmutableList.Builder<Map.Entry<K, V>> b, MapNode<K, V> node) {
-                        for(int i = 0; i < node.keys.length; ++i) {
-                            b.add(Maps.immutableEntry(node.key(i), node.value(i)));
-                        }
+                        b.addAll(node.entries);
                     }
                 };
             }
@@ -534,10 +523,10 @@ class MapNode<K, V> {
             }
             MapNode<K, V> n1 = ni1.next();
             MapNode<K, V> n2 = ni2.next();
-            if(n1.keys.length != n2.keys.length) {
+            if(n1.entries.size() != n2.entries.size()) {
                 return false;
             }
-            int sz = n1.keys.length;
+            int sz = n1.entries.size();
             if(!checkSubset(n1, n2, sz)) {
                 return false;
             }
@@ -549,10 +538,12 @@ class MapNode<K, V> {
 
     private static <K, V> boolean checkSubset(MapNode<K, V> n1, MapNode<K, V> n2, int sz) {
         for(int i = 0; i < sz; ++i) {
+            Map.Entry<K, V> e1 = n1.entries.get(i);
             boolean found = false;
             for(int j = 0; j < sz; ++j) {
-                if(Objects.equal(n1.keys[i], n2.keys[j])) {
-                    if(Objects.equal(n1.values[i], n2.values[j])) {
+                Map.Entry<K, V> e2 = n2.entries.get(j);
+                if(Objects.equal(e1.getKey(), e2.getKey())) {
+                    if(Objects.equal(e1.getValue(), e2.getValue())) {
                         found = true;
                         break;
                     }
@@ -564,15 +555,5 @@ class MapNode<K, V> {
             }
         }
         return true;
-    }
-
-    @SuppressWarnings("unchecked")
-    private K key(int i) {
-        return (K) keys[i];
-    }
-
-    @SuppressWarnings("unchecked")
-    private V value(int i) {
-        return (V) values[i];
     }
 }
