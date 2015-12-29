@@ -26,7 +26,7 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
         return root == null;
     }
 
-    public boolean contains(Object key) {
+    public boolean contains(T key) {
         return MapNode.containsKey(root, key);
     }
 
@@ -35,7 +35,7 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
         return new ImmutableSalvagingSet<T>(pair.getLeft());
     }
 
-    public ImmutableSalvagingSet<T> remove(Object key) {
+    public ImmutableSalvagingSet<T> remove(T key) {
         Pair<MapNode<T, ObjectUtils.Null>, ObjectUtils.Null> pair = MapNode.remove(root, key);
         return new ImmutableSalvagingSet<T>(pair.getLeft());
     }

@@ -26,15 +26,15 @@ public class ImmutableSalvagingMap<K, V> {
         return root == null;
     }
 
-    public boolean containsKey(Object key) {
+    public boolean containsKey(K key) {
         return MapNode.containsKey(root, key);
     }
 
-    public boolean containsValue(Object value) {
+    public boolean containsValue(V value) {
         return MapNode.containsValue(root, value);
     }
 
-    public V get(Object key) {
+    public V get(K key) {
         return MapNode.get(root, key);
     }
 
@@ -47,12 +47,12 @@ public class ImmutableSalvagingMap<K, V> {
         return put(key, value).getLeft();
     }
 
-    public Pair<ImmutableSalvagingMap<K, V>, V> remove(Object key) {
+    public Pair<ImmutableSalvagingMap<K, V>, V> remove(K key) {
         Pair<MapNode<K, V>, V> pair = MapNode.remove(root, key);
         return Pair.of(new ImmutableSalvagingMap<K, V>(pair.getLeft()), pair.getRight());
     }
 
-    public ImmutableSalvagingMap<K, V> simpleRemove(Object key) {
+    public ImmutableSalvagingMap<K, V> simpleRemove(K key) {
         return remove(key).getLeft();
     }
 

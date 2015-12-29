@@ -25,19 +25,19 @@ public class ImmutableSalvagingMultimap<K, V> {
         return keyMap.isEmpty();
     }
 
-    public boolean containsKey(Object key) {
+    public boolean containsKey(K key) {
         return keyMap.containsKey(key);
     }
 
-    public boolean containsValue(Object value) {
+    public boolean containsValue(V value) {
         return valueMap.containsKey(value);
     }
 
-    public boolean containsEntry(Object key, Object value) {
+    public boolean containsEntry(K key, V value) {
         return keyMap.containsKey(key) && keyMap.get(key).contains(value);
     }
 
-    public ImmutableSalvagingSet<V> get(Object key) {
+    public ImmutableSalvagingSet<V> get(K key) {
         return keyMap.get(key);
     }
 
