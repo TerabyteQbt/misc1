@@ -1,18 +1,11 @@
 package misc1.commons.concurrent;
 
-import com.google.common.collect.Lists;
-import java.util.Deque;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import misc1.commons.ExceptionUtils;
 
-public final class WorkPool {
+public final class WorkPool implements Executor, AutoCloseable {
     private final ExecutorService es;
-    private final Object lock = new Object();
-    private final Deque<Future<?>> pending = Lists.newLinkedList();
 
     public static WorkPool defaultParallelism() {
         return explicitParallelism(Runtime.getRuntime().availableProcessors());
@@ -30,45 +23,13 @@ public final class WorkPool {
         this.es = es;
     }
 
-    public void submit(Runnable r) {
-        Future<?> f = es.submit(r);
-        synchronized(lock) {
-            pending.addLast(f);
-        }
+    @Override
+    public void execute(Runnable r) {
+        es.execute(r);
     }
 
-    public void join() {
-        while(true) {
-            Future<?> f;
-            synchronized(lock) {
-                if(pending.isEmpty()) {
-                    break;
-                }
-                f = pending.removeFirst();
-            }
-            try {
-                f.get();
-            }
-            catch(InterruptedException e) {
-                throw ExceptionUtils.commute(e);
-            }
-            catch(ExecutionException e) {
-                throw ExceptionUtils.commute(e.getCause());
-            }
-        }
-    }
-
-    public void shutdown() {
+    @Override
+    public void close() {
         es.shutdown();
-    }
-
-    private final Executor asExecutor = new Executor() {
-        @Override
-        public void execute(Runnable command) {
-            submit(command);
-        }
-    };
-    public Executor asExecutor() {
-        return asExecutor;
     }
 }
