@@ -1,5 +1,7 @@
 package misc1.commons.ds;
 
+import com.google.common.base.Function;
+
 public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
     private final StructType<S, B> type;
     private ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map;
@@ -18,6 +20,10 @@ public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuil
             return (VB)map.get(k);
         }
         return k.getDefault().get();
+    }
+
+    public B apply(Function<B, B> f) {
+        return f.apply(type.createBuilder(map));
     }
 
     public S build() {
