@@ -1,23 +1,24 @@
 package misc1.third_party_tools.mains;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.Resources;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.ParseException;
+
 import misc1.third_party_tools.ivy.IvyCache;
 import misc1.third_party_tools.ivy.IvyModuleAndVersion;
 import misc1.third_party_tools.ivy.IvyResult;
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
 import qbt.NormalDependencyType;
 import qbt.QbtCommand;
 import qbt.QbtMain;
@@ -27,6 +28,10 @@ import qbt.manifest.QbtManifest;
 import qbt.tip.PackageTip;
 import qbt.tip.RepoTip;
 import qbt.utils.TarballUtils;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteStreams;
+import com.google.common.io.Resources;
 
 // TODO: remove dep on mockito?
 public final class ImportThirdPartyTest {
@@ -77,7 +82,7 @@ public final class ImportThirdPartyTest {
         for(String arg : args) {
             argsBuilder.add(arg);
         }
-        return QbtMain.runInstance(instance, argsBuilder.build(), false);
+        return QbtMain.runInstance(instance, argsBuilder.build(), true);
     }
     @Ignore
     @Test
@@ -166,5 +171,14 @@ public final class ImportThirdPartyTest {
         catch(IllegalArgumentException e) {
             // pass
         }
+    }
+    
+    @Test
+    public void testSomeBullshit() throws Exception {
+        Path workspace = unpackWorkspace("testCreateThirdParty");
+        ImportThirdParty itp = new ImportThirdParty();
+        Assert.assertEquals(0, runInstance(Paths.get("/home/cmyers/projects/1/meta"), itp, "--repo", "3p", "--logLevel=DEBUG"));
+        //QbtManifest m = QbtManifest.parse(workspace.resolve("qbt-manifest"));
+        //Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.com.jcraft.jsch.agentproxy")));
     }
 }
