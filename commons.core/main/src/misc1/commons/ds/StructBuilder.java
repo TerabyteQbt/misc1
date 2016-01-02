@@ -22,6 +22,23 @@ public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuil
         return k.getDefault().get();
     }
 
+    @Override
+    public int hashCode() {
+        return map.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null) {
+            return false;
+        }
+        if(!getClass().equals(obj.getClass())) {
+            return false;
+        }
+        StructBuilder<S, B> other = (StructBuilder<S, B>)obj;
+        return map.equals(other.map);
+    }
+
     public B apply(Function<B, B> f) {
         return f.apply(type.createBuilder(map));
     }

@@ -23,4 +23,20 @@ public class MapStructBuilder<S extends MapStruct<S, B, K, VS, VB>, B, K, VS, VB
         }
         return type.create(b.build());
     }
+
+    @Override
+    public final int hashCode() {
+        return map.hashCode();
+    }
+
+    @Override
+    public final boolean equals(Object obj) {
+        if(obj == null) {
+            return false;
+        }
+        if(!getClass().equals(obj.getClass())) {
+            return false;
+        }
+        return map.equals(((MapStructBuilder) obj).map);
+    }
 }
