@@ -5,15 +5,23 @@ import java.util.Map;
 
 public class MapStructBuilder<S extends MapStruct<S, B, K, VS, VB>, B, K, VS, VB> {
     private final MapStructType<S, B, K, VS, VB> type;
-    private final ImmutableSalvagingMap<K, VB> map;
+    public final ImmutableSalvagingMap<K, VB> map;
 
     protected MapStructBuilder(MapStructType<S, B, K, VS, VB> type, ImmutableSalvagingMap<K, VB> map) {
         this.type = type;
         this.map = map;
     }
 
+    public VB get(K key) {
+        return map.get(key);
+    }
+
     public B with(K key, VB vb) {
         return type.createBuilder(map.simplePut(key, vb));
+    }
+
+    public B without(K key) {
+        return type.createBuilder(map.simpleRemove(key));
     }
 
     public S build() {

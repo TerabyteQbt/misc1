@@ -8,7 +8,7 @@ import misc1.commons.merge.Merge;
 import org.apache.commons.lang3.tuple.Triple;
 
 public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
-    private final ImmutableList<StructKey<S, ?, ?>> keys;
+    public final ImmutableList<StructKey<S, ?, ?>> keys;
 
     public StructType(Iterable<StructKey<S, ?, ?>> keys) {
         this.keys = ImmutableList.copyOf(keys);

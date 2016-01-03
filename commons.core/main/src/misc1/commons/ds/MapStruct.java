@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class MapStruct<S extends MapStruct<S, B, K, VS, VB>, B, K, VS, VB> {
     private final MapStructType<S, B, K, VS, VB> type;
-    final ImmutableMap<K, VS> map;
+    public final ImmutableMap<K, VS> map;
 
     protected MapStruct(MapStructType<S, B, K, VS, VB> type, ImmutableMap<K, VS> map) {
         this.type = type;

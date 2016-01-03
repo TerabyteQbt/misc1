@@ -5,7 +5,7 @@ import misc1.commons.merge.Merge;
 import misc1.commons.merge.Merges;
 
 public abstract class StructKey<S, VS, VB> {
-    private final String name;
+    public final String name;
     private final Optional<VB> def;
 
     public StructKey(String name) {
