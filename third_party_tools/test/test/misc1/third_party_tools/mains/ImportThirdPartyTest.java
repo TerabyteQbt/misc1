@@ -23,7 +23,8 @@ import qbt.QbtCommand;
 import qbt.QbtMain;
 import qbt.QbtTempDir;
 import qbt.QbtUtils;
-import qbt.manifest.QbtManifest;
+import qbt.manifest.QbtManifestVersions;
+import qbt.manifest.current.QbtManifest;
 import qbt.tip.PackageTip;
 import qbt.tip.RepoTip;
 import qbt.utils.TarballUtils;
@@ -102,7 +103,7 @@ public final class ImportThirdPartyTest {
         Assert.assertTrue(junitJarPath.toFile().exists());
         Path hamcrestJarPath = workspace.resolve("local/HEAD/tp/mc/org.hamcrest/hamcrest.core/src/jars/hamcrest-core.jar");
         Assert.assertTrue(hamcrestJarPath.toFile().exists());
-        QbtManifest m = QbtManifest.parse(workspace.resolve("qbt-manifest"));
+        QbtManifest m = QbtManifestVersions.parse(ImmutableList.copyOf(QbtUtils.readLines(workspace.resolve("qbt-manifest"))));
         Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.junit.junit")));
         Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.org.hamcrest.hamcrest.core")));
 
@@ -124,7 +125,7 @@ public final class ImportThirdPartyTest {
 
         Assert.assertEquals("Maven Module Version junit:junit:4.12", QbtUtils.readLines(junitMDPath).get(0));
         Assert.assertEquals("Maven Module Version org.hamcrest:hamcrest-core:1.3", QbtUtils.readLines(hamcrestMDPath).get(0));
-        QbtManifest m = QbtManifest.parse(workspace.resolve("qbt-manifest"));
+        QbtManifest m = QbtManifestVersions.parse(ImmutableList.copyOf(QbtUtils.readLines(workspace.resolve("qbt-manifest"))));
         Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.junit.junit")));
         Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.org.hamcrest.hamcrest.core")));
         Assert.assertEquals(Pair.of(NormalDependencyType.STRONG, "HEAD"), m.repos.get(RepoTip.TYPE.parseRequire("tp")).packages.get("mc.junit.junit").normalDeps.get("mc.org.hamcrest.hamcrest.core"));
@@ -139,7 +140,7 @@ public final class ImportThirdPartyTest {
         ImportThirdParty itp = new ImportThirdParty();
         Assert.assertEquals(0, runInstance(workspace, itp, "--module", "junit:junit:4.12", "--repo", "tp"));
 
-        QbtManifest m = QbtManifest.parse(workspace.resolve("qbt-manifest"));
+        QbtManifest m = QbtManifestVersions.parse(ImmutableList.copyOf(QbtUtils.readLines(workspace.resolve("qbt-manifest"))));
         Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.junit.junit")));
         Assert.assertFalse(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.org.hamcrest.hamcrest.core")));
     }
@@ -150,7 +151,7 @@ public final class ImportThirdPartyTest {
         Path workspace = unpackWorkspace("testCreateThirdParty");
         ImportThirdParty itp = new ImportThirdParty();
         Assert.assertEquals(0, runInstance(workspace, itp, "--module", "com.jcraft:jsch.agentproxy:0.0.6", "--repo", "tp"));
-        QbtManifest m = QbtManifest.parse(workspace.resolve("qbt-manifest"));
+        QbtManifest m = QbtManifestVersions.parse(ImmutableList.copyOf(QbtUtils.readLines(workspace.resolve("qbt-manifest"))));
         Assert.assertTrue(m.packageToRepo.containsKey(PackageTip.TYPE.parseRequire("mc.com.jcraft.jsch.agentproxy")));
     }
 
