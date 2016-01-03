@@ -4,6 +4,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import misc1.commons.Maybe;
+import misc1.commons.ds.WrapperType;
 import org.apache.commons.lang3.tuple.Triple;
 
 public final class Merges {
@@ -99,5 +100,15 @@ public final class Merges {
     };
     public static <E> Merge<ImmutableSet<E>> set() {
         return (Merge)SET;
+    }
+
+    public static <W, D> Merge<W> wrapper(final WrapperType<W, D> type, final Merge<D> delegate) {
+        return new Merge<W>() {
+            @Override
+            public Triple<W, W, W> merge(W lhs, W mhs, W rhs) {
+                Triple<D, D, D> r = delegate.merge(type.unwrap(lhs), type.unwrap(mhs), type.unwrap(rhs));
+                return Triple.of(type.wrap(r.getLeft()), type.wrap(r.getMiddle()), type.wrap(r.getRight()));
+            }
+        };
     }
 }
