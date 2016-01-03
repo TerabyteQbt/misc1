@@ -15,7 +15,19 @@ public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder
     }
 
     public B builder() {
-        return createBuilder(ImmutableSalvagingMap.<StructKey<S, ?, ?>, Object>of());
+        ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> b = ImmutableSalvagingMap.of();
+        for(StructKey<S, ?, ?> k : keys) {
+            b = copyDefault(b, k);
+        }
+        return createBuilder(b);
+    }
+
+    private static <S, VS, VB> ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> copyDefault(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> b, StructKey<S, VS, VB> key) {
+        Optional<VB> mvb = key.getDefault();
+        if(mvb.isPresent()) {
+            b = b.simplePut(key, mvb.get());
+        }
+        return b;
     }
 
     public final S create(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map) {
@@ -34,11 +46,7 @@ public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder
     private static <S, VS, VB> void copyKey(ImmutableMap.Builder<StructKey<S, ?, ?>, Object> b, ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map, StructKey<S, VS, VB> k) {
         VB vb = (VB)map.get(k);
         if(vb == null) {
-            Optional<VB> mv = k.getDefault();
-            if(!mv.isPresent()) {
-                throw new IllegalArgumentException("Key required: " + k);
-            }
-            vb = mv.get();
+            throw new IllegalArgumentException("Key required: " + k);
         }
         VS vs = k.toStruct(vb);
         b.put(k, vs);
