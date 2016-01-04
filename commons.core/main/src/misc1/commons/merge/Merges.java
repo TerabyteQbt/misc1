@@ -1,10 +1,10 @@
 package misc1.commons.merge;
 
+import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import misc1.commons.Maybe;
-import misc1.commons.ds.WrapperType;
 import org.apache.commons.lang3.tuple.Triple;
 
 public final class Merges {
@@ -90,10 +90,10 @@ public final class Merges {
         return (Merge)SET;
     }
 
-    public static <W, D> Merge<W> wrapper(final WrapperType<W, D> type, final Merge<D> delegate) {
+    public static <W, D> Merge<W> wrapper(Function<W, D> unwrap, Merge<D> delegate, Function<D, W> wrap) {
         return (lhs, mhs, rhs) -> {
-            Triple<D, D, D> r = delegate.merge(type.unwrap(lhs), type.unwrap(mhs), type.unwrap(rhs));
-            return Triple.of(type.wrap(r.getLeft()), type.wrap(r.getMiddle()), type.wrap(r.getRight()));
+            Triple<D, D, D> r = delegate.merge(unwrap.apply(lhs), unwrap.apply(mhs), unwrap.apply(rhs));
+            return Triple.of(wrap.apply(r.getLeft()), wrap.apply(r.getMiddle()), wrap.apply(r.getRight()));
         };
     }
 }
