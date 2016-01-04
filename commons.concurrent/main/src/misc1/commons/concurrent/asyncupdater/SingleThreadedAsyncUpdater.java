@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Queue;
 import javax.annotation.CheckForNull;
 import misc1.commons.Maybe;
-import misc1.commons.NiceCallable;
 import misc1.commons.concurrent.ConcurrencyUtils;
 import misc1.commons.concurrent.misc.PollingServiceThread;
 
@@ -91,14 +90,11 @@ final class SingleThreadedAsyncUpdater<K, A extends KeyedAsyncUpdate<K, A>> impl
     }
 
     public boolean test_only_awaitEmpty() throws InterruptedException {
-        return ConcurrencyUtils.poll(new NiceCallable<Maybe<Void>>() {
-            @Override
-            public Maybe<Void> call() {
-                if(keys.isEmpty() && threadWaiting) {
-                    return Maybe.of(null);
-                }
-                return Maybe.not();
+        return ConcurrencyUtils.poll(() -> {
+            if(keys.isEmpty() && threadWaiting) {
+                return Maybe.of(null);
             }
+            return Maybe.not();
         }, lock, 10000).isPresent();
     }
 }
