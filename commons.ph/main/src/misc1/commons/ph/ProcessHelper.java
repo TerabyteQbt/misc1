@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -56,17 +55,7 @@ public class ProcessHelper extends StructBuilder<ProcessHelperStruct, ProcessHel
         b.add(OUT = new SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect>("out", ProcessBuilder.Redirect.PIPE));
         b.add(ERR = new SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect>("err", ProcessBuilder.Redirect.PIPE));
 
-        TYPE = new StructType<ProcessHelperStruct, ProcessHelper>(b.build()) {
-            @Override
-            protected ProcessHelperStruct createUnchecked(ImmutableMap<StructKey<ProcessHelperStruct, ?, ?>, Object> map) {
-                return new ProcessHelperStruct(map);
-            }
-
-            @Override
-            protected ProcessHelper createBuilder(ImmutableSalvagingMap<StructKey<ProcessHelperStruct, ?, ?>, Object> map) {
-                return new ProcessHelper(map);
-            }
-        };
+        TYPE = new StructType<ProcessHelperStruct, ProcessHelper>(b.build(), ProcessHelperStruct::new, ProcessHelper::new);
     }
 
     public ProcessHelper inheritInput() {

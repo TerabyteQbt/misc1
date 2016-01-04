@@ -12,7 +12,7 @@ public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuil
     }
 
     public <VB> B set(StructKey<S, ?, VB> k, VB vb) {
-        return type.createBuilder(map.simplePut(k, vb));
+        return type.builderCtor.apply(map.simplePut(k, vb));
     }
 
     public <VB> VB get(StructKey<S, ?, VB> k) {
@@ -40,7 +40,7 @@ public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuil
     }
 
     public B apply(Function<B, B> f) {
-        return f.apply(type.createBuilder(map));
+        return f.apply(type.builderCtor.apply(map));
     }
 
     public S build() {

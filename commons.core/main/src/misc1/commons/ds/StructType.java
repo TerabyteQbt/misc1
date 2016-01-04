@@ -1,5 +1,6 @@
 package misc1.commons.ds;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -7,11 +8,15 @@ import misc1.commons.ds.ImmutableSalvagingMap;
 import misc1.commons.merge.Merge;
 import org.apache.commons.lang3.tuple.Triple;
 
-public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
+public class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
     public final ImmutableList<StructKey<S, ?, ?>> keys;
+    final Function<ImmutableMap<StructKey<S, ?, ?>, Object>, S> structCtor;
+    final Function<ImmutableSalvagingMap<StructKey<S, ?, ?>, Object>, B> builderCtor;
 
-    public StructType(Iterable<StructKey<S, ?, ?>> keys) {
+    public StructType(Iterable<StructKey<S, ?, ?>> keys, Function<ImmutableMap<StructKey<S, ?, ?>, Object>, S> structCtor, Function<ImmutableSalvagingMap<StructKey<S, ?, ?>, Object>, B> builderCtor) {
         this.keys = ImmutableList.copyOf(keys);
+        this.structCtor = structCtor;
+        this.builderCtor = builderCtor;
     }
 
     public B builder() {
@@ -19,7 +24,7 @@ public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder
         for(StructKey<S, ?, ?> k : keys) {
             b = copyDefault(b, k);
         }
-        return createBuilder(b);
+        return builderCtor.apply(b);
     }
 
     private static <S, VS, VB> ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> copyDefault(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> b, StructKey<S, VS, VB> key) {
@@ -40,7 +45,7 @@ public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder
         for(StructKey<S, ?, ?> k : keys) {
             copyKey(b, map, k);
         }
-        return createUnchecked(b.build());
+        return structCtor.apply(b.build());
     }
 
     private static <S, VS, VB> void copyKey(ImmutableMap.Builder<StructKey<S, ?, ?>, Object> b, ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map, StructKey<S, VS, VB> k) {
@@ -69,13 +74,10 @@ public abstract class StructType<S extends Struct<S, B>, B extends StructBuilder
             for(StructKey<S, ?, ?> k : keys) {
                 h.mergeKey(k);
             }
-            S lhs2 = createUnchecked(lhsB.build());
-            S mhs2 = createUnchecked(mhsB.build());
-            S rhs2 = createUnchecked(rhsB.build());
+            S lhs2 = structCtor.apply(lhsB.build());
+            S mhs2 = structCtor.apply(mhsB.build());
+            S rhs2 = structCtor.apply(rhsB.build());
             return Triple.of(lhs2, mhs2, rhs2);
         };
     }
-
-    protected abstract S createUnchecked(ImmutableMap<StructKey<S, ?, ?>, Object> map);
-    protected abstract B createBuilder(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> map);
 }
