@@ -1,5 +1,6 @@
 package misc1.commons.ds;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 
@@ -22,6 +23,10 @@ public class MapStructBuilder<S extends MapStruct<S, B, K, VS, VB>, B, K, VS, VB
 
     public B without(K key) {
         return type.createBuilder(map.simpleRemove(key));
+    }
+
+    public B transform(K k, Function<VB, VB> f) {
+        return with(k, f.apply(get(k)));
     }
 
     public S build() {

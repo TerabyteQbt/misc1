@@ -332,11 +332,11 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             if(modifiedPackages.contains(old.getKey())) {
                 continue;
             }
-            rmb = rmb.set(RepoManifest.PACKAGES, rmb.get(RepoManifest.PACKAGES).with(old.getKey(), old.getValue().builder()));
+            rmb = rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(old.getKey(), old.getValue().builder()));
         }
         for(IvyModuleAndVersion module : modifiedModules) {
             String packageName = getPackageFromModule(module);
-            rmb = rmb.set(RepoManifest.PACKAGES, rmb.get(RepoManifest.PACKAGES).with(packageName, createPackageManifest(dependencyEdges, module, packageName)));
+            rmb = rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(packageName, createPackageManifest(dependencyEdges, module, packageName)));
         }
         QbtManifest.Builder newManifest = manifest.builder();
         newManifest = newManifest.with(destinationRepo, rmb);
@@ -349,18 +349,18 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         String packagePath = getPackagePathFromModule(module);
         LOGGER.debug("Building package manifest for module " + module + " (" + packageName + ")");
         PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
-        pmb = pmb.set(PackageManifest.METADATA, pmb.get(PackageManifest.METADATA).set(PackageMetadata.ARCH_INDEPENDENT, true));
-        pmb = pmb.set(PackageManifest.METADATA, pmb.get(PackageManifest.METADATA).set(PackageMetadata.PREFIX, Maybe.of(packagePath)));
-        pmb = pmb.set(PackageManifest.METADATA, pmb.get(PackageManifest.METADATA).set(PackageMetadata.QBT_ENV, ImmutableSet.of("JDK")));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.ARCH_INDEPENDENT, true));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.PREFIX, Maybe.of(packagePath)));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.QBT_ENV, ImmutableSet.of("JDK")));
 
         // add deps
         PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
         for(PackageTip dep : dependencyEdges.get(pt)) {
             LOGGER.debug("Package " + pt + " depends upon " + dep);
-            pmb = pmb.set(PackageManifest.NORMAL_DEPS, pmb.get(PackageManifest.NORMAL_DEPS).with(dep.name, Pair.of(NormalDependencyType.STRONG, dep.tip)));
+            pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with(dep.name, Pair.of(NormalDependencyType.STRONG, dep.tip)));
         }
         // add link checker by default - our default script uses it
-        pmb = pmb.set(PackageManifest.NORMAL_DEPS, pmb.get(PackageManifest.NORMAL_DEPS).with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
+        pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
 
         return pmb;
     }

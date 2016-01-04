@@ -22,6 +22,10 @@ public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuil
         return k.getDefault().get();
     }
 
+    public <VB> B transform(StructKey<S, ?, VB> k, Function<VB, VB> f) {
+        return set(k, f.apply(get(k)));
+    }
+
     @Override
     public int hashCode() {
         return map.hashCode();
