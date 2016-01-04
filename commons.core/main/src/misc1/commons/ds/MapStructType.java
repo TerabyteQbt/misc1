@@ -17,18 +17,15 @@ public abstract class MapStructType<S extends MapStruct<S, B, K, VS, VB>, B, K, 
     }
 
     public Merge<S> merge() {
-        return new Merge<S>() {
-            @Override
-            public Triple<S, S, S> merge(S lhs, S mhs, S rhs) {
-                Merge<VS> mergeValue = mergeValue();
-                Merge<Maybe<VS>> mergeMaybeValue = Merges.maybe(mergeValue);
-                Merge<ImmutableMap<K, VS>> mergeMap = Merges.<K, VS>map(mergeMaybeValue);
-                Triple<ImmutableMap<K, VS>, ImmutableMap<K, VS>, ImmutableMap<K, VS>> r = mergeMap.merge(lhs.map, mhs.map, rhs.map);
-                S lhs2 = create(r.getLeft());
-                S mhs2 = create(r.getMiddle());
-                S rhs2 = create(r.getRight());
-                return Triple.of(lhs2, mhs2, rhs2);
-            }
+        return (lhs, mhs, rhs) -> {
+            Merge<VS> mergeValue = mergeValue();
+            Merge<Maybe<VS>> mergeMaybeValue = Merges.maybe(mergeValue);
+            Merge<ImmutableMap<K, VS>> mergeMap = Merges.<K, VS>map(mergeMaybeValue);
+            Triple<ImmutableMap<K, VS>, ImmutableMap<K, VS>, ImmutableMap<K, VS>> r = mergeMap.merge(lhs.map, mhs.map, rhs.map);
+            S lhs2 = create(r.getLeft());
+            S mhs2 = create(r.getMiddle());
+            S rhs2 = create(r.getRight());
+            return Triple.of(lhs2, mhs2, rhs2);
         };
     }
 
