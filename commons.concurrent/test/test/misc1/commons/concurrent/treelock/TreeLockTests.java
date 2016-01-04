@@ -42,24 +42,18 @@ public class TreeLockTests {
         TestThreads tt = new TestThreads();
         final TestLatches tl = new TestLatches();
         final AtomicBoolean p2Locked = new AtomicBoolean(false);
-        tt.start(new Runnable() {
-            @Override
-            public void run() {
-                l.lock(ArrayTreeLockPath.split(p1, '/'));
-                tl.signal("p1 has locked");
-                negativeSleep();
-                Assert.assertFalse("[" + p2 + "] got lock despite [" + p1 + "] locked", p2Locked.get());
-                l.unlock(ArrayTreeLockPath.split(p1, '/'));
-            }
+        tt.start(() -> {
+            l.lock(ArrayTreeLockPath.split(p1, '/'));
+            tl.signal("p1 has locked");
+            negativeSleep();
+            Assert.assertFalse("[" + p2 + "] got lock despite [" + p1 + "] locked", p2Locked.get());
+            l.unlock(ArrayTreeLockPath.split(p1, '/'));
         });
-        tt.start(new Runnable() {
-            @Override
-            public void run() {
-                tl.awaitCommute("p1 has locked");
-                l.lock(ArrayTreeLockPath.split(p2, '/'));
-                p2Locked.set(true);
-                l.unlock(ArrayTreeLockPath.split(p2, '/'));
-            }
+        tt.start(() -> {
+            tl.awaitCommute("p1 has locked");
+            l.lock(ArrayTreeLockPath.split(p2, '/'));
+            p2Locked.set(true);
+            l.unlock(ArrayTreeLockPath.split(p2, '/'));
         });
         tt.join();
     }
@@ -73,25 +67,19 @@ public class TreeLockTests {
         final ArrayTreeLock<String> l = new ArrayTreeLock<String>();
         TestThreads tt = new TestThreads();
         final TestLatches tl = new TestLatches();
-        tt.start(new Runnable() {
-            @Override
-            public void run() {
-                l.lock(ArrayTreeLockPath.split(p1, '/'));
-                tl.signal("p1 has locked");
-                tl.awaitCommute("p2 has locked");
-                tl.signal("p1 knows p2 has locked");
-                l.unlock(ArrayTreeLockPath.split(p1, '/'));
-            }
+        tt.start(() -> {
+            l.lock(ArrayTreeLockPath.split(p1, '/'));
+            tl.signal("p1 has locked");
+            tl.awaitCommute("p2 has locked");
+            tl.signal("p1 knows p2 has locked");
+            l.unlock(ArrayTreeLockPath.split(p1, '/'));
         });
-        tt.start(new Runnable() {
-            @Override
-            public void run() {
-                tl.awaitCommute("p1 has locked");
-                l.lock(ArrayTreeLockPath.split(p2, '/'));
-                tl.signal("p2 has locked");
-                tl.awaitCommute("p1 knows p2 has locked");
-                l.unlock(ArrayTreeLockPath.split(p2, '/'));
-            }
+        tt.start(() -> {
+            tl.awaitCommute("p1 has locked");
+            l.lock(ArrayTreeLockPath.split(p2, '/'));
+            tl.signal("p2 has locked");
+            tl.awaitCommute("p1 knows p2 has locked");
+            l.unlock(ArrayTreeLockPath.split(p2, '/'));
         });
         tt.join();
     }

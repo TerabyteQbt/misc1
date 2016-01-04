@@ -6,7 +6,6 @@ import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import misc1.commons.ExceptionUtils;
 import misc1.commons.Result;
@@ -55,21 +54,13 @@ public final class ComputationTreeComputer {
                 }
             }
             final ImmutableList<Result<Object>> childrenResults = childrenResultsBuilder.build();
-            e.execute(new Runnable() {
-                @Override
-                public void run() {
-                    complete(Result.newFromCallable(new Callable<Object>() {
-                        @Override
-                        public Object call() throws Exception {
-                            ImmutableList.Builder<Object> childrenBuilder = ImmutableList.builder();
-                            for(Result<Object> childrenResult : childrenResults) {
-                                childrenBuilder.add(childrenResult.getCommute());
-                            }
-                            return tree.postProcess.apply(childrenBuilder.build());
-                        }
-                    }));
+            e.execute(() -> complete(Result.newFromCallable(() -> {
+                ImmutableList.Builder<Object> childrenBuilder = ImmutableList.builder();
+                for(Result<Object> childrenResult : childrenResults) {
+                    childrenBuilder.add(childrenResult.getCommute());
                 }
-            });
+                return tree.postProcess.apply(childrenBuilder.build());
+            })));
             status = StatusStatus.STARTED;
         }
 
@@ -99,12 +90,7 @@ public final class ComputationTreeComputer {
     private final Map<ComputationTree<?>, Status> statuses = Maps.newIdentityHashMap();
 
     private void submitCheck(final Status status) {
-        e.execute(new Runnable() {
-            @Override
-            public void run() {
-                status.checkStart();
-            }
-        });
+        e.execute(() -> status.checkStart());
     }
 
     private Status vivify(ComputationTree<?> tree) {

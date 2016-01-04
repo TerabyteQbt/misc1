@@ -68,12 +68,7 @@ public class ImmutableSalvagingMap<K, V> {
         return b.build();
     }
 
-    private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = new Function<Map.Entry<Object, Object>, Object>() {
-        @Override
-        public Object apply(Map.Entry<Object, Object> input) {
-            return input.getKey();
-        }
-    };
+    private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = (input) -> input.getKey();
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static <K, V> Function<Map.Entry<K, V>, K> getKeyFunction() {
         return (Function<Map.Entry<K, V>, K>) (Function) GET_KEY_FUNCTION;

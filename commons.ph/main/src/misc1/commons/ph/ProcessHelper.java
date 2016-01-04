@@ -335,28 +335,25 @@ public class ProcessHelper extends StructBuilder<ProcessHelperStruct, ProcessHel
 
         public void start(final boolean isError, final InputStream is) {
             threadStarted();
-            horribleExecutor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        try(BufferedReader br = new BufferedReader(new InputStreamReader(is, Charsets.UTF_8))) {
-                            while(true) {
-                                String line = br.readLine();
-                                if(line == null) {
-                                    return;
-                                }
-                                if(!write(isError, line)) {
-                                    return;
-                                }
+            horribleExecutor.submit(() -> {
+                try {
+                    try(BufferedReader br = new BufferedReader(new InputStreamReader(is, Charsets.UTF_8))) {
+                        while(true) {
+                            String line = br.readLine();
+                            if(line == null) {
+                                return;
+                            }
+                            if(!write(isError, line)) {
+                                return;
                             }
                         }
-                        catch(Exception e) {
-                            threadFailed(e);
-                        }
                     }
-                    finally {
-                        threadDone();
+                    catch(Exception e) {
+                        threadFailed(e);
                     }
+                }
+                finally {
+                    threadDone();
                 }
             });
         }

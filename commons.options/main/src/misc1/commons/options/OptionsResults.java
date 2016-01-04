@@ -11,7 +11,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -70,17 +69,14 @@ public class OptionsResults<O> {
 
     public static <O> List<String> help(Class<O> clazz) {
         ArrayList<OptionsFragment<? super O, ?, ?>> optionsFragments = Lists.newArrayList(getFragmentsFromInterface(clazz));
-        Collections.sort(optionsFragments, new Comparator<OptionsFragment<? super O, ?, ?>>() {
-            @Override
-            public int compare(OptionsFragment<? super O, ?, ?> o1, OptionsFragment<? super O, ?, ?> o2) {
-                if(o1.getPriority() < o2.getPriority()) {
-                    return 1;
-                }
-                if(o1.getPriority() > o2.getPriority()) {
-                    return -1;
-                }
-                return o1.getHelpKey().compareTo(o2.getHelpKey());
+        Collections.sort(optionsFragments, (o1, o2) -> {
+            if(o1.getPriority() < o2.getPriority()) {
+                return 1;
             }
+            if(o1.getPriority() > o2.getPriority()) {
+                return -1;
+            }
+            return o1.getHelpKey().compareTo(o2.getHelpKey());
         });
         ImmutableList.Builder<String> b = ImmutableList.builder();
         for(OptionsFragment<? super O, ?, ?> optionsFragment : optionsFragments) {

@@ -45,10 +45,5 @@ public final class PatternIvyModuleAndVersion extends BaseIvyModuleAndVersion {
         return false;
     }
 
-    public static final Function<String, PatternIvyModuleAndVersion> PARSE = new Function<String, PatternIvyModuleAndVersion>() {
-        @Override
-        public PatternIvyModuleAndVersion apply(String arg) {
-            return new PatternIvyModuleAndVersion(arg);
-        }
-    };
+    public static final Function<String, PatternIvyModuleAndVersion> PARSE = (arg) -> new PatternIvyModuleAndVersion(arg);
 }

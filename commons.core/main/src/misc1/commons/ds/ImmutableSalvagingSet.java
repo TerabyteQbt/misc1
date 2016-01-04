@@ -40,12 +40,7 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
         return new ImmutableSalvagingSet<T>(pair.getLeft());
     }
 
-    private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = new Function<Map.Entry<Object, Object>, Object>() {
-        @Override
-        public Object apply(Map.Entry<Object, Object> input) {
-            return input.getKey();
-        }
-    };
+    private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = (input) -> input.getKey();
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static <T> Function<Map.Entry<T, ObjectUtils.Null>, T> getKeyFunction() {
         return (Function<Map.Entry<T, ObjectUtils.Null>, T>) (Function) GET_KEY_FUNCTION;

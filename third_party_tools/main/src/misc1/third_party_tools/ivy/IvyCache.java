@@ -1,6 +1,5 @@
 package misc1.third_party_tools.ivy;
 
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -45,20 +44,17 @@ public class IvyCache {
     public IvyResult queryIvy(final IvyModuleAndVersion mv) {
         final Path moduleDir = root.resolve(QbtHashUtils.of(mv.toString()).toString());
 
-        QbtUtils.semiAtomicDirCache(moduleDir, "", new Function<Path, ObjectUtils.Null>() {
-            @Override
-            public ObjectUtils.Null apply(Path moduleTempDir) {
-                try {
-                    ImmutableList<IvyModuleAndVersion> deps = ivyResolveAndRetrieve(mv, null, ImmutableList.of("master"));
-                    QbtUtils.writeLines(moduleTempDir.resolve("dependencies"), Iterables.transform(deps, Functions.toStringFunction()));
-                    // fetch sources into a separate directory (TODO: change this? have to update eclipsegen)
-                    ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("jars"), ImmutableList.of("master", "compile", "runtime", "provided"));
-                    ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("sources"), ImmutableList.of("sources"));
-                    return ObjectUtils.NULL;
-                }
-                catch(Exception e) {
-                    throw ExceptionUtils.commute(e);
-                }
+        QbtUtils.semiAtomicDirCache(moduleDir, "", (moduleTempDir) -> {
+            try {
+                ImmutableList<IvyModuleAndVersion> deps = ivyResolveAndRetrieve(mv, null, ImmutableList.of("master"));
+                QbtUtils.writeLines(moduleTempDir.resolve("dependencies"), Iterables.transform(deps, Functions.toStringFunction()));
+                // fetch sources into a separate directory (TODO: change this? have to update eclipsegen)
+                ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("jars"), ImmutableList.of("master", "compile", "runtime", "provided"));
+                ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("sources"), ImmutableList.of("sources"));
+                return ObjectUtils.NULL;
+            }
+            catch(Exception e) {
+                throw ExceptionUtils.commute(e);
             }
         });
 

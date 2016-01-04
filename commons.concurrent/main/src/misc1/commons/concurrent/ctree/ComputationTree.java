@@ -25,12 +25,7 @@ public final class ComputationTree<V> {
     }
 
     public static <V> ComputationTree<V> constant(final V v) {
-        return new ComputationTree<V>(ImmutableList.<ComputationTree<?>>of(), new Function<ImmutableList<Object>, V>() {
-            @Override
-            public V apply(ImmutableList<Object> input) {
-                return v;
-            }
-        });
+        return new ComputationTree<V>(ImmutableList.<ComputationTree<?>>of(), (input) -> v);
     }
 
     @SuppressWarnings("unchecked")
@@ -39,57 +34,34 @@ public final class ComputationTree<V> {
     }
 
     public static <A, B> ComputationTree<Pair<A, B>> pair(ComputationTree<A> lhs, ComputationTree<B> rhs) {
-        return new ComputationTree<Pair<A, B>>(ImmutableList.of(lhs, rhs), new Function<ImmutableList<Object>, Pair<A, B>>() {
-            @Override
-            public Pair<A, B> apply(ImmutableList<Object> input) {
-                A lhs = getElementTyped(input, 0);
-                B rhs = getElementTyped(input, 1);
-                return Pair.of(lhs, rhs);
-            }
+        return new ComputationTree<Pair<A, B>>(ImmutableList.of(lhs, rhs), (input) -> {
+            A lhsInner = getElementTyped(input, 0);
+            B rhsInner = getElementTyped(input, 1);
+            return Pair.of(lhsInner, rhsInner);
         });
     }
 
     public static <V> ComputationTree<ImmutableList<V>> list(Iterable<ComputationTree<V>> children) {
-        return new ComputationTree<ImmutableList<V>>(ImmutableList.<ComputationTree<?>>copyOf(children), new Function<ImmutableList<Object>, ImmutableList<V>>() {
-            @SuppressWarnings("unchecked")
-            @Override
-            public ImmutableList<V> apply(ImmutableList<Object> input) {
-                return (ImmutableList<V>)input;
-            }
-        });
+        return new ComputationTree<ImmutableList<V>>(ImmutableList.<ComputationTree<?>>copyOf(children), (input) -> (ImmutableList<V>)input);
     }
 
     public static <K, V> ComputationTree<ImmutableMap<K, V>> map(Map<K, ComputationTree<V>> map) {
-        return list(Iterables.transform(map.entrySet(), new Function<Map.Entry<K, ComputationTree<V>>, ComputationTree<Pair<K, V>>>() {
-            @Override
-            public ComputationTree<Pair<K, V>> apply(Map.Entry<K, ComputationTree<V>> input) {
-                final K k = input.getKey();
-                return input.getValue().transform(new Function<V, Pair<K, V>>() {
-                    @Override
-                    public Pair<K, V> apply(V input) {
-                        return Pair.of(k, input);
-                    }
-                });
+        return list(Iterables.transform(map.entrySet(), (input) -> {
+            final K k = input.getKey();
+            return input.getValue().transform((input2) -> Pair.of(k, input2));
+        })).transform((input) -> {
+            ImmutableMap.Builder<K, V> b = ImmutableMap.builder();
+            for(Pair<K, V> p : input) {
+                b.put(p);
             }
-        })).transform(new Function<ImmutableList<Pair<K, V>>, ImmutableMap<K, V>>() {
-            @Override
-            public ImmutableMap<K, V> apply(ImmutableList<Pair<K, V>> input) {
-                ImmutableMap.Builder<K, V> b = ImmutableMap.builder();
-                for(Pair<K, V> p : input) {
-                    b.put(p);
-                }
-                return b.build();
-            }
+            return b.build();
         });
     }
 
     public <W> ComputationTree<W> transform(final Function<? super V, W> fn) {
-        return new ComputationTree<W>(ImmutableList.<ComputationTree<?>>of(this), new Function<ImmutableList<Object>, W>() {
-            @Override
-            public W apply(ImmutableList<Object> input) {
-                V v = getElementTyped(input, 0);
-                return fn.apply(v);
-            }
+        return new ComputationTree<W>(ImmutableList.<ComputationTree<?>>of(this), (input) -> {
+            V v = getElementTyped(input, 0);
+            return fn.apply(v);
         });
     }
 
@@ -114,16 +86,13 @@ public final class ComputationTree<V> {
     }
 
     public static ComputationTree<Boolean> and(Iterable<ComputationTree<Boolean>> inputs) {
-        return ComputationTree.list(inputs).transform(new Function<ImmutableList<Boolean>, Boolean>() {
-            @Override
-            public Boolean apply(ImmutableList<Boolean> input) {
-                for(Boolean b : input) {
-                    if(!b) {
-                        return false;
-                    }
+        return ComputationTree.list(inputs).transform((input) -> {
+            for(Boolean b : input) {
+                if(!b) {
+                    return false;
                 }
-                return true;
             }
+            return true;
         });
     }
 }

@@ -26,10 +26,5 @@ public final class IvyModuleAndVersion extends BaseIvyModuleAndVersion {
         return !version.equals("*");
     }
 
-    public static final Function<String, IvyModuleAndVersion> PARSE = new Function<String, IvyModuleAndVersion>() {
-        @Override
-        public IvyModuleAndVersion apply(String arg) {
-            return new IvyModuleAndVersion(arg);
-        }
-    };
+    public static final Function<String, IvyModuleAndVersion> PARSE = (arg) -> new IvyModuleAndVersion(arg);
 }

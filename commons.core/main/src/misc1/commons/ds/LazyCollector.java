@@ -55,24 +55,18 @@ public final class LazyCollector<T> {
 
     public ImmutableSet<T> forceSet() {
         final ImmutableSet.Builder<T> b = ImmutableSet.builder();
-        accumulate(new Function<T, Void>() {
-            @Override
-            public Void apply(T t) {
-                b.add(t);
-                return null;
-            }
+        accumulate((t) -> {
+            b.add(t);
+            return null;
         });
         return b.build();
     }
 
     public ImmutableList<T> forceList() {
         final ImmutableList.Builder<T> b = ImmutableList.builder();
-        accumulate(new Function<T, Void>() {
-            @Override
-            public Void apply(T t) {
-                b.add(t);
-                return null;
-            }
+        accumulate((t) -> {
+            b.add(t);
+            return null;
         });
         return b.build();
     }
