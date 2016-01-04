@@ -1,5 +1,7 @@
 #!/bin/bash
 
+eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK:-1_7}_HOME
+
 set -e
 
 $INPUT_ARTIFACTS_DIR/weak/qbt_fringe.wrapper_generator.release/strong/qbt_fringe.wrapper_generator.release/bin/wrapper_generator $INPUT_ARTIFACTS_DIR/weak/misc1.third_party_tools.main/strong $OUTPUT_ARTIFACTS_DIR \

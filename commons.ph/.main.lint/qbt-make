@@ -1,5 +1,7 @@
 #!/bin/bash
 
+eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK:-1_7}_HOME
+
 set -e
 
 "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -l "$INPUT_ARTIFACTS_DIR"/weak/misc1.commons.options.main/strong/misc1.commons.options.main/sources
