@@ -1,7 +1,5 @@
 package misc1.third_party_tools.ivy;
 
-import com.google.common.base.Function;
-
 public final class PatternIvyModuleAndVersion extends BaseIvyModuleAndVersion {
     public PatternIvyModuleAndVersion(String arg) {
         super(arg);
@@ -44,6 +42,4 @@ public final class PatternIvyModuleAndVersion extends BaseIvyModuleAndVersion {
         }
         return false;
     }
-
-    public static final Function<String, PatternIvyModuleAndVersion> PARSE = (arg) -> new PatternIvyModuleAndVersion(arg);
 }

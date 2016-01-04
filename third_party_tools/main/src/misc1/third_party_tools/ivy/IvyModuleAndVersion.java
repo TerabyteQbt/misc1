@@ -1,7 +1,5 @@
 package misc1.third_party_tools.ivy;
 
-import com.google.common.base.Function;
-
 public final class IvyModuleAndVersion extends BaseIvyModuleAndVersion {
     public IvyModuleAndVersion(String arg) {
         super(arg);
@@ -25,6 +23,4 @@ public final class IvyModuleAndVersion extends BaseIvyModuleAndVersion {
     protected boolean validateVersion(String version) {
         return !version.equals("*");
     }
-
-    public static final Function<String, IvyModuleAndVersion> PARSE = (arg) -> new IvyModuleAndVersion(arg);
 }

@@ -1,6 +1,5 @@
 package misc1.commons.ds;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collection;
@@ -68,13 +67,8 @@ public class ImmutableSalvagingMap<K, V> {
         return b.build();
     }
 
-    private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = (input) -> input.getKey();
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static <K, V> Function<Map.Entry<K, V>, K> getKeyFunction() {
-        return (Function<Map.Entry<K, V>, K>) (Function) GET_KEY_FUNCTION;
-    }
     public Collection<K> keys() {
-        return Collections2.transform(MapNode.entries(root), ImmutableSalvagingMap.<K, V>getKeyFunction());
+        return Collections2.transform(MapNode.entries(root), Map.Entry<K, V>::getKey);
     }
 
     private static final ImmutableSalvagingMap<Object, Object> EMPTY = new ImmutableSalvagingMap<Object, Object>();

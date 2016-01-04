@@ -1,6 +1,5 @@
 package misc1.commons.ds;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import java.util.Iterator;
 import java.util.Map;
@@ -40,14 +39,9 @@ public class ImmutableSalvagingSet<T> implements Iterable<T> {
         return new ImmutableSalvagingSet<T>(pair.getLeft());
     }
 
-    private static Function<Map.Entry<Object, Object>, Object> GET_KEY_FUNCTION = (input) -> input.getKey();
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static <T> Function<Map.Entry<T, ObjectUtils.Null>, T> getKeyFunction() {
-        return (Function<Map.Entry<T, ObjectUtils.Null>, T>) (Function) GET_KEY_FUNCTION;
-    }
     @Override
     public Iterator<T> iterator() {
-        return Iterators.transform(MapNode.entries(root).iterator(), ImmutableSalvagingSet.<T>getKeyFunction());
+        return Iterators.transform(MapNode.entries(root).iterator(), Map.Entry<T, ObjectUtils.Null>::getKey);
     }
 
     public static <T> ImmutableSalvagingSet<T> of() {

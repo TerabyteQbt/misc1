@@ -6,7 +6,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import java.util.Map;
-import misc1.commons.tuple.Misc1PairUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -78,11 +77,11 @@ public final class ComputationTree<V> {
     }
 
     public <W> ComputationTree<V> combineLeft(ComputationTree<W> right) {
-        return ComputationTree.pair(this, right).transform(Misc1PairUtils.<V, W>leftFunction());
+        return ComputationTree.pair(this, right).transform(Pair<V, W>::getLeft);
     }
 
     public <W> ComputationTree<W> combineRight(ComputationTree<W> right) {
-        return ComputationTree.pair(this, right).transform(Misc1PairUtils.<V, W>rightFunction());
+        return ComputationTree.pair(this, right).transform(Pair<V, W>::getRight);
     }
 
     public static ComputationTree<Boolean> and(Iterable<ComputationTree<Boolean>> inputs) {
