@@ -53,7 +53,6 @@ import qbt.options.ConfigOptionsDelegate;
 import qbt.options.ManifestOptionsDelegate;
 import qbt.options.ManifestOptionsResult;
 import qbt.repo.LocalRepoAccessor;
-import qbt.tip.PackageTip;
 import qbt.tip.RepoTip;
 import qbt.vcs.Repository;
 
@@ -107,7 +106,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         ImmutableList.Builder<Pair<PatternIvyModuleAndVersion, IvyModuleAndVersion>> addDependencyBuilder = ImmutableList.builder();
         ImmutableList.Builder<Pair<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion>> removeDependencyBuilder = ImmutableList.builder();
         ImmutableList.Builder<Triple<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependencyBuilder = ImmutableList.builder();
-        ImmutableListMultimap.Builder<PackageTip, String> linkCheckerArgsBuilder = ImmutableListMultimap.builder();
+        ImmutableListMultimap.Builder<String, String> linkCheckerArgsBuilder = ImmutableListMultimap.builder();
         Pattern modulePattern = Pattern.compile("^MODULE:(.*)$");
         Pattern addPattern = Pattern.compile("^ADD:(.*),(.*)$");
         Pattern removePattern = Pattern.compile("^REMOVE:(.*),(.*)$");
@@ -143,7 +142,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             }
             Matcher linkCheckerArgsMatcher = linkCheckerArgsPattern.matcher(configLine);
             if(linkCheckerArgsMatcher.matches()) {
-                linkCheckerArgsBuilder.put(PackageTip.TYPE.parseRequire(linkCheckerArgsMatcher.group(1)), linkCheckerArgsMatcher.group(2));
+                linkCheckerArgsBuilder.put(linkCheckerArgsMatcher.group(1), linkCheckerArgsMatcher.group(2));
                 continue;
             }
 
@@ -154,13 +153,13 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         ImmutableList<Pair<PatternIvyModuleAndVersion, IvyModuleAndVersion>> addDependency = addDependencyBuilder.build();
         ImmutableList<Pair<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion>> removeDependency = removeDependencyBuilder.build();
         ImmutableList<Triple<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependency = rewriteDependencyBuilder.build();
-        ImmutableListMultimap<PackageTip, String> linkCheckerArgs = linkCheckerArgsBuilder.build();
+        ImmutableListMultimap<String, String> linkCheckerArgs = linkCheckerArgsBuilder.build();
 
         LOGGER.info("Calculating Maximal Versions");
-        // this map contains PackageTip => maxVersion, moduledescriptor, set of package tip dependencies (of that version)
-        Map<PackageTip, Triple<ComparableVersion, IvyModuleAndVersion, Set<PackageTip>>> maximalVersions = Maps.newHashMap();
+        // this map contains String => maxVersion, moduledescriptor, set of package tip dependencies (of that version)
+        Map<String, Triple<ComparableVersion, IvyModuleAndVersion, Set<String>>> maximalVersions = Maps.newHashMap();
         {
-            Set<PackageTip> checkedDisk = Sets.newHashSet();
+            Set<String> checkedDisk = Sets.newHashSet();
             Queue<IvyModuleAndVersion> queue = Lists.newLinkedList(modules);
             Set<IvyModuleAndVersion> queued = Sets.newHashSet(queue);
 
@@ -174,16 +173,15 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                 String packageName = getPackageFromModule(module);
                 String packagePath = getPackagePathFromModule(module);
                 Path newPackagePath = repoRoot.resolve(packagePath).normalize();
-                PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
 
-                if(checkedDisk.add(pt)) {
+                if(checkedDisk.add(packageName)) {
                     // get version on disk if we have it?
-                    if(manifest.packageToRepo.containsKey(pt)) {
+                    if(manifest.packageToRepo.containsKey(packageName)) {
                         LOGGER.debug("Looking for existing version for module \"" + module + "\"");
                         // get it!
                         Path metadataPath = newPackagePath.resolve("maven-module.info");
                         if(!Files.exists(metadataPath)) {
-                            throw new IllegalStateException("Package " + pt + " is already in the manifest but has no maven-module.info file");
+                            throw new IllegalStateException("Package " + packageName + " is already in the manifest but has no maven-module.info file");
                         }
                         IvyModuleAndVersion oldModule = new IvyModuleAndVersion(QbtUtils.readLines(metadataPath).get(0).replaceFirst("Maven Module Version ",  ""));
                         LOGGER.debug("Found module \"" + oldModule + "\" on disk");
@@ -228,58 +226,57 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                     }
                 }
 
-                ImmutableSet.Builder<PackageTip> depPackageTipsBuilder = ImmutableSet.builder();
+                ImmutableSet.Builder<String> depsBuilder = ImmutableSet.builder();
                 for(IvyModuleAndVersion depModule : mungedDependencies.build()) {
                     LOGGER.debug("Munged dependency: " + module + " -> " + depModule);
                     if(queued.add(depModule)) {
                         queue.add(depModule);
                     }
-                    depPackageTipsBuilder.add(PackageTip.TYPE.parseRequire(getPackageFromModule(depModule)));
+                    depsBuilder.add(getPackageFromModule(depModule));
                 }
-                Set<PackageTip> depPackageTips = depPackageTipsBuilder.build();
+                Set<String> deps = depsBuilder.build();
 
-                Triple<ComparableVersion, IvyModuleAndVersion, Set<PackageTip>> alreadyTriple = maximalVersions.get(pt);
+                Triple<ComparableVersion, IvyModuleAndVersion, Set<String>> alreadyTriple = maximalVersions.get(packageName);
                 boolean keep = false;
                 if(alreadyTriple != null) {
                     ComparableVersion oldCv = alreadyTriple.getLeft();
                     if(requestedCv.compareTo(oldCv) <= 0) {
-                        LOGGER.debug("[" + pt + "] Already have version " + oldCv + " which is not older than requested version " + requestedCv + ", keeping existing version");
+                        LOGGER.debug("[" + packageName + "] Already have version " + oldCv + " which is not older than requested version " + requestedCv + ", keeping existing version");
                     }
                     else {
-                        LOGGER.debug("[" + pt + "] Already have version " + oldCv + " is older than requested version " + requestedCv + ", replacing");
+                        LOGGER.debug("[" + packageName + "] Already have version " + oldCv + " is older than requested version " + requestedCv + ", replacing");
                         keep = true;
                     }
                 }
                 else {
-                    LOGGER.debug("[" + pt + "] First version is " + requestedCv + ", adding");
+                    LOGGER.debug("[" + packageName + "] First version is " + requestedCv + ", adding");
                     keep = true;
                 }
                 if(keep) {
-                    maximalVersions.put(pt, Triple.of(requestedCv, module, depPackageTips));
+                    maximalVersions.put(packageName, Triple.of(requestedCv, module, deps));
                 }
             }
         }
 
-        ImmutableMap.Builder<PackageTip, IvyModuleAndVersion> installsBuilder = ImmutableMap.builder();
-        Multimap<PackageTip, PackageTip> dependencyEdges = HashMultimap.create();
+        ImmutableMap.Builder<String, IvyModuleAndVersion> installsBuilder = ImmutableMap.builder();
+        Multimap<String, String> dependencyEdges = HashMultimap.create();
         {
-            Queue<PackageTip> queue = Lists.newLinkedList();
-            Set<PackageTip> queued = Sets.newHashSet();
+            Queue<String> queue = Lists.newLinkedList();
+            Set<String> queued = Sets.newHashSet();
             for(IvyModuleAndVersion module : modules) {
                 String packageName = getPackageFromModule(module);
-                PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
-                if(queued.add(pt)) {
-                    queue.add(pt);
+                if(queued.add(packageName)) {
+                    queue.add(packageName);
                 }
             }
             while(!queue.isEmpty()) {
-                PackageTip pt = queue.poll();
-                Triple<ComparableVersion, IvyModuleAndVersion, Set<PackageTip>> maximalVersion = maximalVersions.get(pt);
-                installsBuilder.put(pt, maximalVersion.getMiddle());
-                for(PackageTip depPt : maximalVersion.getRight()) {
-                    dependencyEdges.put(pt, depPt);
-                    if(queued.add(depPt)) {
-                        queue.add(depPt);
+                String packageName = queue.poll();
+                Triple<ComparableVersion, IvyModuleAndVersion, Set<String>> maximalVersion = maximalVersions.get(packageName);
+                installsBuilder.put(packageName, maximalVersion.getMiddle());
+                for(String depName : maximalVersion.getRight()) {
+                    dependencyEdges.put(packageName, depName);
+                    if(queued.add(depName)) {
+                        queue.add(depName);
                     }
                 }
             }
@@ -290,8 +287,8 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
         LOGGER.info("Fetching/Upgrading packages");
         // We've now have a complete list of maximal versions.
-        for(Map.Entry<PackageTip, IvyModuleAndVersion> install : installsBuilder.build().entrySet()) {
-            PackageTip pt = install.getKey();
+        for(Map.Entry<String, IvyModuleAndVersion> install : installsBuilder.build().entrySet()) {
+            String packageName = install.getKey();
             IvyModuleAndVersion module = install.getValue();
             String packagePath = getPackagePathFromModule(module);
 
@@ -301,11 +298,11 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                 // make sure newPackagePath is actually still inside repoDir
                 repoDir.relativize(newPackagePath);
 
-                LOGGER.debug("Upgrading existing package " + pt + " using module string " + module);
+                LOGGER.debug("Upgrading existing package " + packageName + " using module string " + module);
                 QbtUtils.deleteRecursively(newPackagePath, false);
             }
             else {
-                LOGGER.debug("Fetching new package " + pt + " using module string " + module);
+                LOGGER.debug("Fetching new package " + packageName + " using module string " + module);
             }
 
             // Create the package
@@ -313,7 +310,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
             // put in qbt-make
             Path qbtMakePath = newPackagePath.resolve("qbt-make");
-            QbtUtils.writeLines(qbtMakePath, createQbtMakeContents(linkCheckerArgs.get(pt)));
+            QbtUtils.writeLines(qbtMakePath, createQbtMakeContents(linkCheckerArgs.get(packageName)));
             qbtMakePath.toFile().setExecutable(true);
 
             downloadIvyModule(ivyCache, module, newPackagePath);
@@ -337,7 +334,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         }
         for(IvyModuleAndVersion module : modifiedModules) {
             String packageName = getPackageFromModule(module);
-            rmb = rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(packageName, createPackageManifest(dependencyEdges, module, packageName)));
+            rmb = rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module, packageName)));
         }
         QbtManifest.Builder newManifest = manifest.builder();
         newManifest = newManifest.with(destinationRepo, rmb);
@@ -346,7 +343,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         return 0;
     }
 
-    private PackageManifest.Builder createPackageManifest(Multimap<PackageTip, PackageTip> dependencyEdges, IvyModuleAndVersion module, String packageName) {
+    private PackageManifest.Builder createPackageManifest(RepoTip destinationRepo, Multimap<String, String> dependencyEdges, IvyModuleAndVersion module, String packageName) {
         String packagePath = getPackagePathFromModule(module);
         LOGGER.debug("Building package manifest for module " + module + " (" + packageName + ")");
         PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
@@ -355,10 +352,9 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.QBT_ENV, ImmutableSet.of("JDK")));
 
         // add deps
-        PackageTip pt = PackageTip.TYPE.parseRequire(packageName);
-        for(PackageTip dep : dependencyEdges.get(pt)) {
-            LOGGER.debug("Package " + pt + " depends upon " + dep);
-            pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with(dep.name, Pair.of(NormalDependencyType.STRONG, dep.tip)));
+        for(String dep : dependencyEdges.get(packageName)) {
+            LOGGER.debug("Package " + packageName + " depends upon " + dep);
+            pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with(dep, Pair.of(NormalDependencyType.STRONG, destinationRepo.tip)));
         }
         // add link checker by default - our default script uses it
         pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
