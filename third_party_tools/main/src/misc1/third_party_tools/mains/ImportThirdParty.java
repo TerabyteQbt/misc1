@@ -31,6 +31,7 @@ import misc1.commons.options.OptionsResults;
 import misc1.third_party_tools.ivy.IvyCache;
 import misc1.third_party_tools.ivy.IvyModuleAndVersion;
 import misc1.third_party_tools.ivy.PatternIvyModuleAndVersion;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.maven.artifact.versioning.ComparableVersion;
@@ -53,6 +54,7 @@ import qbt.options.ConfigOptionsDelegate;
 import qbt.options.ManifestOptionsDelegate;
 import qbt.options.ManifestOptionsResult;
 import qbt.repo.LocalRepoAccessor;
+import qbt.tip.PackageTip;
 import qbt.tip.RepoTip;
 import qbt.vcs.Repository;
 
@@ -315,7 +317,11 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             downloadIvyModule(ivyCache, module, newPackagePath);
 
             newManifest = newManifest.transform(destinationRepo, (rmb) -> {
-                return rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module, packageName)));
+                return rmb.transform(RepoManifest.PACKAGES, (packages) -> {
+                    packages = packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module, packageName, false));
+                    packages = packages.with(packageName + ".lc", createPackageManifest(destinationRepo, dependencyEdges, module, packageName, true));
+                    return packages;
+                });
             });
             changed = true;
         }
@@ -330,7 +336,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         return 0;
     }
 
-    private PackageManifest.Builder createPackageManifest(RepoTip destinationRepo, Multimap<String, String> dependencyEdges, IvyModuleAndVersion module, String packageName) {
+    private PackageManifest.Builder createPackageManifest(RepoTip destinationRepo, Multimap<String, String> dependencyEdges, IvyModuleAndVersion module, String packageName, boolean isLinkCheck) {
         String packagePath = getPackagePathFromModule(module);
         LOGGER.debug("Building package manifest for module " + module + " (" + packageName + ")");
         PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
@@ -343,8 +349,13 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             LOGGER.debug("Package " + packageName + " depends upon " + dep);
             pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with(dep, Pair.of(NormalDependencyType.STRONG, destinationRepo.tip)));
         }
-        // add link checker by default - our default script uses it
-        pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
+        if(isLinkCheck) {
+            // add link checker by default - our default script uses it
+            pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
+        }
+        else {
+            pmb = pmb.transform(PackageManifest.VERIFY_DEPS, (verifyDeps) -> verifyDeps.with(Pair.of(PackageTip.TYPE.of(packageName + ".lc", destinationRepo.tip), "link_check"), ObjectUtils.NULL));
+        }
 
         return pmb;
     }
@@ -412,7 +423,10 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         b.add("");
         b.add("set -e");
         b.add("cp -R $PACKAGE_DIR/src/* $OUTPUT_ARTIFACTS_DIR/");
-        b.add("$INPUT_ARTIFACTS_DIR/weak/qbt_fringe.link_checker.release/strong/qbt_fringe.link_checker.release/bin/link_checker --qbtDefaults " + Joiner.on(' ').join(linkCheckerArgs));
+        b.add("if [ -d $INPUT_ARTIFACTS_DIR/weak/qbt_fringe.link_checker.release ]");
+        b.add("then");
+        b.add("    $INPUT_ARTIFACTS_DIR/weak/qbt_fringe.link_checker.release/strong/qbt_fringe.link_checker.release/bin/link_checker --qbtDefaults " + Joiner.on(' ').join(linkCheckerArgs));
+        b.add("fi");
         return b.build();
     }
 }
