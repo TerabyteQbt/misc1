@@ -1,13 +1,13 @@
 package misc1.commons.options;
 
 import com.google.common.collect.ImmutableList;
-import misc1.commons.Maybe;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class IntegrationTests {
     public static class TestStringOptions {
-        public static final OptionsFragment<TestStringOptions, ?, String> s1 = new NamedStringSingletonArgumentOptionsFragment<TestStringOptions>(ImmutableList.of("--s1"), Maybe.<String>not(), "s1");
+        public static final OptionsLibrary<TestStringOptions> o = OptionsLibrary.of();
+        public static final OptionsFragment<TestStringOptions, String> s1 = o.oneArg("s1").transform(o.singleton());
     }
 
     @Test
@@ -41,7 +41,8 @@ public class IntegrationTests {
     }
 
     public static class TestFlagOptions {
-        public static final OptionsFragment<TestFlagOptions, ?, Boolean> f = new NamedBooleanFlagOptionsFragment<TestFlagOptions>(ImmutableList.of("-f"), "f");
+        public static final OptionsLibrary<TestFlagOptions> o = OptionsLibrary.of();
+        public static final OptionsFragment<TestFlagOptions, Boolean> f = o.zeroArg("f").transform(o.flag());
     }
 
     @Test
@@ -68,13 +69,15 @@ public class IntegrationTests {
     }
 
     public static class TestUnparsedHardOptions {
-        public static final OptionsFragment<TestUnparsedHardOptions, ?, Boolean> f = new NamedBooleanFlagOptionsFragment<TestUnparsedHardOptions>(ImmutableList.of("-f"), "f");
-        public static final OptionsFragment<TestUnparsedHardOptions, ?, ImmutableList<String>> x = new UnparsedOptionsFragment<TestUnparsedHardOptions>("x", true, null, null);
+        public static final OptionsLibrary<TestUnparsedHardOptions> o = OptionsLibrary.of();
+        public static final OptionsFragment<TestUnparsedHardOptions, Boolean> f = o.zeroArg("f").transform(o.flag());
+        public static final OptionsFragment<TestUnparsedHardOptions, ImmutableList<String>> x = o.unparsed(true);
     }
 
     public static class TestUnparsedSoftOptions {
-        public static final OptionsFragment<TestUnparsedSoftOptions, ?, Boolean> f = new NamedBooleanFlagOptionsFragment<TestUnparsedSoftOptions>(ImmutableList.of("-f"), "f");
-        public static final OptionsFragment<TestUnparsedSoftOptions, ?, ImmutableList<String>> x = new UnparsedOptionsFragment<TestUnparsedSoftOptions>("x", false, null, null);
+        public static final OptionsLibrary<TestUnparsedSoftOptions> o = OptionsLibrary.of();
+        public static final OptionsFragment<TestUnparsedSoftOptions, Boolean> f = o.zeroArg("f").transform(o.flag());
+        public static final OptionsFragment<TestUnparsedSoftOptions, ImmutableList<String>> x = o.unparsed(false);
     }
 
     @Test
@@ -96,9 +99,10 @@ public class IntegrationTests {
     }
 
     public static class TestCombinedOptions {
-        public static final OptionsFragment<TestCombinedOptions, ?, String> s1 = new NamedStringSingletonArgumentOptionsFragment<TestCombinedOptions>(ImmutableList.of("--s1"), Maybe.<String>not(), "s1");
-        public static final OptionsFragment<TestCombinedOptions, ?, Boolean> f = new NamedBooleanFlagOptionsFragment<TestCombinedOptions>(ImmutableList.of("-f"), "f");
-        public static final OptionsFragment<TestCombinedOptions, ?, ImmutableList<String>> x = new UnparsedOptionsFragment<TestCombinedOptions>("x", true, null, null);
+        public static final OptionsLibrary<TestCombinedOptions> o = OptionsLibrary.of();
+        public static final OptionsFragment<TestCombinedOptions, String> s1 = o.oneArg("s1").transform(o.singleton());
+        public static final OptionsFragment<TestCombinedOptions, Boolean> f = o.zeroArg("f").transform(o.flag());
+        public static final OptionsFragment<TestCombinedOptions, ImmutableList<String>> x = o.unparsed(true);
     }
 
     @Test

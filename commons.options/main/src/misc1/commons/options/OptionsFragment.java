@@ -1,14 +1,17 @@
 package misc1.commons.options;
 
-import java.util.List;
-import org.apache.commons.lang3.tuple.Pair;
+public final class OptionsFragment<O, R> {
+    final OptionsFragmentInternals<O, ?, R> delegate;
 
-public interface OptionsFragment<O, M, R> {
-    public int getPriority();
-    public Pair<M, Integer> match(List<String> argsList);
-    public M empty();
-    public M combine(M lhs, M rhs);
-    public R complete(M intermediate);
-    public String getHelpKey();
-    public String getHelpDesc();
+    OptionsFragment(OptionsFragmentInternals<O, ?, R> delegate) {
+        this.delegate = delegate;
+    }
+
+    public OptionsFragment<O, R> helpDesc(String helpDesc) {
+        return new OptionsFragment<O, R>(delegate.helpDesc(helpDesc));
+    }
+
+    public <R2> OptionsFragment<O, R2> transform(OptionsTransform<R, R2> f) {
+        return new OptionsFragment<O, R2>(delegate.transform(f));
+    }
 }

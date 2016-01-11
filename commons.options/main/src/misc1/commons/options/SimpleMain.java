@@ -1,7 +1,5 @@
 package misc1.commons.options;
 
-import com.google.common.collect.ImmutableList;
-
 public abstract class SimpleMain<O, E extends Throwable> implements SimpleMainInterface<O, E> {
     protected void exec(String[] args) throws E{
         execStatic(getOptionsClass(), this, args);
@@ -35,8 +33,9 @@ public abstract class SimpleMain<O, E extends Throwable> implements SimpleMainIn
         return main.run(options);
     }
 
-    public static <O> HelpOptionsFragment<O> simpleHelpOption() {
-        return new HelpOptionsFragment(ImmutableList.of("--help"), "Show help.");
+    public static <O> OptionsFragment<O, ?> simpleHelpOption() {
+        OptionsLibrary<O> o = OptionsLibrary.of();
+        return o.zeroArg("help").transform(o.help()).helpDesc("Show help.");
     }
 
     protected abstract Class<O> getOptionsClass();

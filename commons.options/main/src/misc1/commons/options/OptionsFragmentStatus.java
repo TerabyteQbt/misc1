@@ -1,7 +1,9 @@
 package misc1.commons.options;
 
+import misc1.commons.ds.LazyCollector;
+
 public class OptionsFragmentStatus<M, R> {
-    private final OptionsFragment<?, M, R> optionsFragment;
+    private final OptionsFragmentInternals<?, M, R> optionsFragment;
     private Delegate delegate = new EmptyDelegate();
 
     private abstract class Delegate {
@@ -12,7 +14,7 @@ public class OptionsFragmentStatus<M, R> {
 
     private class EmptyDelegate extends Delegate {
         private Delegate emptyReplacement() {
-            return new IntermediateDelegate(optionsFragment.empty());
+            return new IntermediateDelegate(LazyCollector.of());
         }
 
         @Override
@@ -32,15 +34,15 @@ public class OptionsFragmentStatus<M, R> {
     }
 
     private class IntermediateDelegate extends Delegate {
-        private final M intermediate;
+        private final LazyCollector<M> list;
 
-        public IntermediateDelegate(M intermediate) {
-            this.intermediate = intermediate;
+        public IntermediateDelegate(LazyCollector<M> list) {
+            this.list = list;
         }
 
         @Override
-        public Delegate addIntermediate(M intermediate2) {
-            return new IntermediateDelegate(optionsFragment.combine(intermediate, intermediate2));
+        public Delegate addIntermediate(M intermediate) {
+            return new IntermediateDelegate(list.union(LazyCollector.of(intermediate)));
         }
 
         @Override
@@ -50,7 +52,7 @@ public class OptionsFragmentStatus<M, R> {
 
         @Override
         public R complete() {
-            return optionsFragment.complete(intermediate);
+            return optionsFragment.process.apply(optionsFragment.matcher.getHelpDesc(), list.forceList());
         }
     }
 
@@ -77,7 +79,7 @@ public class OptionsFragmentStatus<M, R> {
         }
     }
 
-    public OptionsFragmentStatus(OptionsFragment<?, M, R> optionsFragment) {
+    public OptionsFragmentStatus(OptionsFragmentInternals<?, M, R> optionsFragment) {
         this.optionsFragment = optionsFragment;
     }
 

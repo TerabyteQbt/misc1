@@ -19,15 +19,15 @@ import misc1.commons.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class OptionsResults<O> {
-    private final ImmutableMap<OptionsFragment<? super O, ?, ?>, Optional<Object>> map;
+    private final ImmutableMap<OptionsFragmentInternals<? super O, ?, ?>, Optional<Object>> map;
 
-    private OptionsResults(ImmutableMap<OptionsFragment<? super O, ?, ?>, Optional<Object>> map) {
+    private OptionsResults(ImmutableMap<OptionsFragmentInternals<? super O, ?, ?>, Optional<Object>> map) {
         this.map = map;
     }
 
-    public <R> R get(OptionsFragment<? super O, ?, R> fragment) {
+    public <R> R get(OptionsFragment<? super O, R> fragment) {
         @SuppressWarnings("unchecked")
-        Optional<R> ret = (Optional<R>)map.get(fragment);
+        Optional<R> ret = (Optional<R>)map.get(fragment.delegate);
         return ret.orNull();
     }
 
@@ -36,94 +36,105 @@ public class OptionsResults<O> {
     }
 
     public static <O> OptionsResults<O> parse(Class<O> clazz, Iterable<String> argsIterable) {
-        List<String> args = ImmutableList.copyOf(argsIterable);
+        ArgsView argsView = new ArgsView(ImmutableList.copyOf(argsIterable));
 
-        int index = 0;
         OptionsResults.Builder<O> b = OptionsResults.builder(clazz);
-        while(index < args.size()) {
-            List<String> subArgs = args.subList(index, args.size());
-            Pair<OptionsFragment<? super O, ?, ?>, Pair<?, Integer>> match = null;
-            for(OptionsFragment<? super O, ?, ?> optionsFragment : b.optionsFragments) {
-                if(match != null && optionsFragment.getPriority() < match.getLeft().getPriority()) {
-                    continue;
+        Map<Integer, List<OptionsFragmentInternals<? super O, ?, ?>>> optionsFragments = Maps.newTreeMap();
+        for(OptionsFragmentInternals<? super O, ?, ?> optionsFragment : b.optionsFragments) {
+            int key = -optionsFragment.getPriority();
+            List<OptionsFragmentInternals<? super O, ?, ?>> priorityOptionsFragments = optionsFragments.get(key);
+            if(priorityOptionsFragments == null) {
+                optionsFragments.put(key, priorityOptionsFragments = Lists.newArrayList());
+            }
+            priorityOptionsFragments.add(optionsFragment);
+        }
+        while(argsView.size() > 0) {
+            Pair<OptionsFragmentInternals<? super O, ?, ?>, Pair<?, ArgsView>> match = null;
+            for(List<OptionsFragmentInternals<? super O, ?, ?>> priorityOptionsFragments : optionsFragments.values()) {
+                for(OptionsFragmentInternals<? super O, ?, ?> optionsFragment : priorityOptionsFragments) {
+                    Pair<?, ArgsView> result = optionsFragment.matcher.match(argsView);
+                    if(result == null) {
+                        continue;
+                    }
+                    Pair<OptionsFragmentInternals<? super O, ?, ?>, Pair<?, ArgsView>> resultMatch = Pair.<OptionsFragmentInternals<? super O, ?, ?>, Pair<?, ArgsView>>of(optionsFragment, result);
+                    if(match != null) {
+                        throw new IllegalStateException("Options match conflict: " + match + "/" + resultMatch);
+                    }
+                    match = resultMatch;
                 }
-                Pair<?, Integer> result = optionsFragment.match(subArgs);
-                if(result == null) {
-                    continue;
+                if(match != null) {
+                    break;
                 }
-                Pair<OptionsFragment<? super O, ?, ?>, Pair<?, Integer>> resultMatch = Pair.<OptionsFragment<? super O, ?, ?>, Pair<?, Integer>>of(optionsFragment, result);
-                if(match != null && optionsFragment.getPriority() == match.getLeft().getPriority()) {
-                    throw new IllegalStateException("Options match conflict: " + match + "/" + resultMatch);
-                }
-                match = resultMatch;
             }
             if(match == null) {
-                throw new OptionsException("No match for arguments: " + subArgs);
+                throw new OptionsException("No match for arguments: " + argsView);
             }
             b = b.addIntermediateUnchecked(match.getLeft(), match.getRight().getLeft());
-            index += match.getRight().getRight();
+            argsView = match.getRight().getRight();
         }
 
         return b.build();
     }
 
     public static <O> List<String> help(Class<O> clazz) {
-        ArrayList<OptionsFragment<? super O, ?, ?>> optionsFragments = Lists.newArrayList(getFragmentsFromInterface(clazz));
+        ArrayList<OptionsFragmentInternals<? super O, ?, ?>> optionsFragments = Lists.newArrayList(getFragmentsFromInterface(clazz));
         Collections.sort(optionsFragments, (o1, o2) -> {
-            if(o1.getPriority() < o2.getPriority()) {
-                return 1;
-            }
-            if(o1.getPriority() > o2.getPriority()) {
-                return -1;
+            int r1 = Integer.compare(o2.getPriority(), o1.getPriority());
+            if(r1 != 0) {
+                return r1;
             }
             return o1.getHelpKey().compareTo(o2.getHelpKey());
         });
         ImmutableList.Builder<String> b = ImmutableList.builder();
-        for(OptionsFragment<? super O, ?, ?> optionsFragment : optionsFragments) {
+        for(OptionsFragmentInternals<? super O, ?, ?> optionsFragment : optionsFragments) {
             b.add(optionsFragment.getHelpDesc());
         }
         return b.build();
     }
 
     public static class Builder<O> {
-        final ImmutableList<OptionsFragment<? super O, ?, ?>> optionsFragments;
-        private final Map<OptionsFragment<? super O, ?, ?>, OptionsFragmentStatus<?, ?>> statuses = Maps.newHashMap();
+        final ImmutableList<OptionsFragmentInternals<? super O, ?, ?>> optionsFragments;
+        private final Map<OptionsFragmentInternals<? super O, ?, ?>, OptionsFragmentStatus<?, ?>> statuses = Maps.newHashMap();
 
         private Builder(Class<O> clazz) {
             this.optionsFragments = getFragmentsFromInterface(clazz);
-            for(OptionsFragment<? super O, ?, ?> optionsFragment : optionsFragments) {
+            for(OptionsFragmentInternals<? super O, ?, ?> optionsFragment : optionsFragments) {
                 addStatus(optionsFragment);
             }
         }
 
         @SuppressWarnings("unchecked")
-        private Builder<O> addIntermediateUnchecked(OptionsFragment<? super O, ?, ?> optionsFragment, Object intermediate) {
-            return addIntermediate((OptionsFragment<? super O, Object, ?>)optionsFragment, intermediate);
+        private Builder<O> addIntermediateUnchecked(OptionsFragmentInternals<? super O, ?, ?> optionsFragment, Object intermediate) {
+            return addIntermediate((OptionsFragmentInternals<? super O, Object, ?>)optionsFragment, intermediate);
         }
 
-        private <M, R> void addStatus(OptionsFragment<? super O, M, R> optionsFragment) {
+        private <M, R> void addStatus(OptionsFragmentInternals<? super O, M, R> optionsFragment) {
             statuses.put(optionsFragment, new OptionsFragmentStatus<M, R>(optionsFragment));
         }
 
         @SuppressWarnings("unchecked")
-        private <M, R> OptionsFragmentStatus<M, R> getStatus(OptionsFragment<? super O, M, R> optionsFragment) {
+        private <M, R> OptionsFragmentStatus<M, R> getStatus(OptionsFragmentInternals<? super O, M, R> optionsFragment) {
             return (OptionsFragmentStatus<M, R>)statuses.get(optionsFragment);
         }
 
-        public <M> Builder<O> addIntermediate(OptionsFragment<? super O, M, ?> optionsFragment, M intermediate) {
+        private <M> Builder<O> addIntermediate(OptionsFragmentInternals<? super O, M, ?> optionsFragment, M intermediate) {
             getStatus(optionsFragment).addIntermediate(intermediate);
             return this;
         }
 
-        public <R> Builder<O> addResult(OptionsFragment<? super O, ?, R> optionsFragment, R result) {
+        public <R> Builder<O> addResult(OptionsFragment<? super O, R> optionsFragment, R result) {
+            return addResult(optionsFragment.delegate, result);
+        }
+
+        private <R> Builder<O> addResult(OptionsFragmentInternals<? super O, ?, R> optionsFragment, R result) {
             getStatus(optionsFragment).addResult(result);
             return this;
         }
 
         public OptionsResults<O> build() {
-            ImmutableMap.Builder<OptionsFragment<? super O, ?, ?>, Optional<Object>> b = ImmutableMap.builder();
+            ImmutableMap.Builder<OptionsFragmentInternals<? super O, ?, ?>, Optional<Object>> b = ImmutableMap.builder();
 
-            for(Map.Entry<OptionsFragment<? super O, ?, ?>, OptionsFragmentStatus<?, ?>> e : statuses.entrySet()) {
+            for(Map.Entry<OptionsFragmentInternals<? super O, ?, ?>, OptionsFragmentStatus<?, ?>> e : statuses.entrySet()) {
                 b.put(e.getKey(), Optional.<Object>fromNullable(e.getValue().complete()));
             }
 
@@ -135,13 +146,13 @@ public class OptionsResults<O> {
         return new Builder<O>(clazz);
     }
 
-    private static <O> ImmutableList<OptionsFragment<? super O, ?, ?>> getFragmentsFromInterface(Class<O> clazz) {
-        ImmutableList.Builder<OptionsFragment<? super O, ?, ?>> b = ImmutableList.builder();
+    private static <O> ImmutableList<OptionsFragmentInternals<? super O, ?, ?>> getFragmentsFromInterface(Class<O> clazz) {
+        ImmutableList.Builder<OptionsFragmentInternals<? super O, ?, ?>> b = ImmutableList.builder();
         getFragmentsFromInterface(b, clazz);
         return b.build();
     }
 
-    private static <O> void getFragmentsFromInterface(ImmutableList.Builder<OptionsFragment<? super O, ?, ?>> b, Class<O> clazz) {
+    private static <O> void getFragmentsFromInterface(ImmutableList.Builder<OptionsFragmentInternals<? super O, ?, ?>> b, Class<O> clazz) {
         Set<Class<?>> checked = Sets.newHashSet();
         Deque<Class<?>> queue = Lists.newLinkedList();
         queue.add(clazz);
@@ -176,11 +187,11 @@ public class OptionsResults<O> {
         }
     }
 
-    private static <O> void getFragmentsFromObject(ImmutableList.Builder<OptionsFragment<? super O, ?, ?>> b, Object o) {
+    private static <O> void getFragmentsFromObject(ImmutableList.Builder<OptionsFragmentInternals<? super O, ?, ?>> b, Object o) {
         if(o instanceof OptionsFragment) {
             @SuppressWarnings("unchecked")
-            OptionsFragment<? super O, ?, ?> o2 = (OptionsFragment<? super O, ?, ?>)o;
-            b.add(o2);
+            OptionsFragment<? super O, ?> o2 = (OptionsFragment<? super O, ?>)o;
+            b.add(o2.delegate);
         }
         if(o instanceof OptionsDelegate) {
             @SuppressWarnings("unchecked")
@@ -189,7 +200,7 @@ public class OptionsResults<O> {
         }
     }
 
-    private static <O> void getFragmentsFromDelegate(ImmutableList.Builder<OptionsFragment<? super O, ?, ?>> b, OptionsDelegate<? super O> od) {
+    private static <O> void getFragmentsFromDelegate(ImmutableList.Builder<OptionsFragmentInternals<? super O, ?, ?>> b, OptionsDelegate<? super O> od) {
         for(Class<?> clazz = od.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
             for(Field f : clazz.getDeclaredFields()) {
                 if(Modifier.isStatic(f.getModifiers())) {

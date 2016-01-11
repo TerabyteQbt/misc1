@@ -25,8 +25,8 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import misc1.commons.Maybe;
-import misc1.commons.options.NamedStringSingletonArgumentOptionsFragment;
 import misc1.commons.options.OptionsFragment;
+import misc1.commons.options.OptionsLibrary;
 import misc1.commons.options.OptionsResults;
 import misc1.third_party_tools.ivy.IvyCache;
 import misc1.third_party_tools.ivy.IvyModuleAndVersion;
@@ -63,9 +63,10 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
     @QbtCommandName("importThirdParty")
     public static interface Options extends QbtCommandOptions {
+        public static final OptionsLibrary<Options> o = OptionsLibrary.of();
         public final ConfigOptionsDelegate<Options> config = new ConfigOptionsDelegate<Options>();
         public final ManifestOptionsDelegate<Options> manifest = new ManifestOptionsDelegate<Options>();
-        public static final OptionsFragment<Options, ?, String> destinationRepo = new NamedStringSingletonArgumentOptionsFragment<Options>(ImmutableList.of("--repo"), Maybe.<String>of("3p"), "Repository to place the modules in when they don't already exist");
+        public static final OptionsFragment<Options, String> destinationRepo = o.oneArg("repo").transform(o.singleton("3p")).helpDesc("Repository to place the modules in when they don't already exist");
     }
 
     @Override
