@@ -282,11 +282,10 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             }
         }
 
-        ImmutableSet.Builder<IvyModuleAndVersion> modifiedModulesBuilder = ImmutableSet.builder();
-        ImmutableSet.Builder<String> modifiedPackagesBuilder = ImmutableSet.builder();
-
         LOGGER.info("Fetching/Upgrading packages");
         // We've now have a complete list of maximal versions.
+        QbtManifest.Builder newManifest = manifest.builder();
+        boolean changed = false;
         for(Map.Entry<String, IvyModuleAndVersion> install : installsBuilder.build().entrySet()) {
             String packageName = install.getKey();
             IvyModuleAndVersion module = install.getValue();
@@ -314,30 +313,18 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             qbtMakePath.toFile().setExecutable(true);
 
             downloadIvyModule(ivyCache, module, newPackagePath);
-            modifiedModulesBuilder.add(module);
-            modifiedPackagesBuilder.add(getPackageFromModule(module));
-        }
-        Set<IvyModuleAndVersion> modifiedModules = modifiedModulesBuilder.build();
-        Set<String> modifiedPackages = modifiedPackagesBuilder.build();
 
-        if(modifiedModules.isEmpty()) {
+            newManifest = newManifest.transform(destinationRepo, (rmb) -> {
+                return rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module, packageName)));
+            });
+            changed = true;
+        }
+
+        if(!changed) {
             LOGGER.info("No packages were modified, nothing to do");
             return 0;
         }
         // Update the manifest
-        RepoManifest.Builder rmb = RepoManifest.TYPE.builder().set(RepoManifest.VERSION, vcsRepo.getCurrentCommit());
-        for(Map.Entry<String, PackageManifest> old : manifest.repos.get(destinationRepo).packages.entrySet()) {
-            if(modifiedPackages.contains(old.getKey())) {
-                continue;
-            }
-            rmb = rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(old.getKey(), old.getValue().builder()));
-        }
-        for(IvyModuleAndVersion module : modifiedModules) {
-            String packageName = getPackageFromModule(module);
-            rmb = rmb.transform(RepoManifest.PACKAGES, (packages) -> packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module, packageName)));
-        }
-        QbtManifest.Builder newManifest = manifest.builder();
-        newManifest = newManifest.with(destinationRepo, rmb);
         manifestResult.deparse(newManifest.build());
 
         return 0;
