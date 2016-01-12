@@ -2,6 +2,7 @@ package misc1.third_party_tools.ivy;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -46,11 +47,11 @@ public class IvyCache {
 
         QbtUtils.semiAtomicDirCache(moduleDir, "", (moduleTempDir) -> {
             try {
-                ImmutableList<IvyModuleAndVersion> deps = ivyResolveAndRetrieve(mv, null, ImmutableList.of("master"));
+                ImmutableList<IvyModuleAndVersion> deps = ivyResolveAndRetrieve(mv, null, ImmutableSet.of("compile", "optional"));
                 QbtUtils.writeLines(moduleTempDir.resolve("dependencies"), Iterables.transform(deps, Functions.toStringFunction()));
                 // fetch sources into a separate directory (TODO: change this? have to update eclipsegen)
-                ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("jars"), ImmutableList.of("master", "compile", "runtime", "provided"));
-                ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("sources"), ImmutableList.of("sources"));
+                ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("jars"), ImmutableSet.of("master"));
+                ivyResolveAndRetrieve(mv, moduleTempDir.resolve("files").resolve("sources"), ImmutableSet.of("sources"));
                 return ObjectUtils.NULL;
             }
             catch(Exception e) {
@@ -87,7 +88,7 @@ public class IvyCache {
      * https://stackoverflow.com/questions/15598612/simplest-ivy-code-to-programmatically-retrieve-dependency-from-maven-central/22455451#22455451
      *
      */
-    private static ImmutableList<IvyModuleAndVersion> ivyResolveAndRetrieve(IvyModuleAndVersion module, Path destinationPath, ImmutableList<String> configs) throws ParseException, IOException {
+    private static ImmutableList<IvyModuleAndVersion> ivyResolveAndRetrieve(IvyModuleAndVersion module, Path destinationPath, ImmutableSet<String> configs) throws ParseException, IOException {
         LOGGER.debug("Processing configs: " + StringUtils.join(configs, ", "));
         try(QbtTempDir cacheDir = new QbtTempDir()) {
             IvySettings is = new IvySettings();
@@ -134,6 +135,16 @@ public class IvyCache {
             ModuleDescriptor ds = ourModule.getDescriptor();
             ImmutableList.Builder<IvyModuleAndVersion> dependencyModuleStrings = ImmutableList.builder();
             for(DependencyDescriptor depD : ds.getDependencies()) {
+                boolean keep = false;
+                for(String moduleConfiguration : depD.getModuleConfigurations()) {
+                    if(configs.contains(moduleConfiguration)) {
+                        keep = true;
+                        break;
+                    }
+                }
+                if(!keep) {
+                    continue;
+                }
                 ModuleRevisionId mrid = depD.getDependencyRevisionId();
                 dependencyModuleStrings.add(new IvyModuleAndVersion(mrid.getOrganisation(), mrid.getName(), mrid.getRevision()));
             }
