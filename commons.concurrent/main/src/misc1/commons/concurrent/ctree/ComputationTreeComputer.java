@@ -25,6 +25,8 @@ public final class ComputationTreeComputer {
     private class Status<V> {
         private final Function<ImmutableList<Object>, V> postProcess;
         private final ImmutableList<Status<?>> children;
+        private final ImmutableList.Builder<Result<?>> childrenResultsBuilder = ImmutableList.builder();
+        private int childrenResultsSize = 0;
 
         public Status(ComputationTree<V> tree, ImmutableList<Status<?>> children) {
             this.postProcess = tree.postProcess;
@@ -35,46 +37,61 @@ public final class ComputationTreeComputer {
         private final Set<Status<?>> outwards = Sets.newHashSet();
         private Result<V> result;
 
-        public synchronized void checkStart() {
-            if(status != StatusStatus.UNSTARTED) {
-                return;
+        public synchronized Result<V> getResultOrListen(Status<?> outward) {
+            if(status != StatusStatus.DONE) {
+                outwards.add(outward);
+                return null;
             }
+            return result;
+        }
 
-            ImmutableList.Builder<Result<?>> childrenResultsBuilder = ImmutableList.builder();
-            for(Status<?> child : children) {
-                synchronized(child) {
-                    switch(child.status) {
-                        case DONE:
-                            childrenResultsBuilder.add(child.result);
-                            break;
-
-                        default:
+        public synchronized void check() {
+            switch(status) {
+                case UNSTARTED:
+                    while(childrenResultsSize < children.size()) {
+                        Status<?> child = children.get(childrenResultsSize);
+                        Result<?> childResult = child.getResultOrListen(this);
+                        if(childResult == null) {
                             return;
+                        }
+                        childrenResultsBuilder.add(childResult);
+                        ++childrenResultsSize;
                     }
-                }
+
+                    // All children finished, time to run, asynchronously (not
+                    // under synch(this))
+                    final ImmutableList<Result<?>> childrenResults = childrenResultsBuilder.build();
+                    e.execute(() -> {
+                        // Force all the children results and then postProcess,
+                        // all inside callable so we inherit child failures.
+                        Result<V> result = Result.newFromCallable(() -> {
+                            ImmutableList.Builder<Object> childrenBuilder = ImmutableList.builder();
+                            for(Result<?> childrenResult : childrenResults) {
+                                childrenBuilder.add(childrenResult.getCommute());
+                            }
+                            return postProcess.apply(childrenBuilder.build());
+                        });
+
+                        // Tag the result.
+                        complete(result);
+                    });
+                    status = StatusStatus.STARTED;
+                    break;
+
+                case STARTED:
+                case DONE:
+                    break;
             }
-            final ImmutableList<Result<?>> childrenResults = childrenResultsBuilder.build();
-            e.execute(() -> complete(Result.newFromCallable(() -> {
-                ImmutableList.Builder<Object> childrenBuilder = ImmutableList.builder();
-                for(Result<?> childrenResult : childrenResults) {
-                    childrenBuilder.add(childrenResult.getCommute());
-                }
-                return postProcess.apply(childrenBuilder.build());
-            })));
-            status = StatusStatus.STARTED;
         }
 
         private synchronized void complete(Result<V> newResult) {
-            if(status != StatusStatus.STARTED) {
-                throw new IllegalStateException();
-            }
-
-            status = StatusStatus.DONE;
             result = newResult;
+            status = StatusStatus.DONE;
             notifyAll();
 
             for(final Status<?> outward : outwards) {
-                submitCheck(outward);
+                // check, but not under synch(this)
+                e.execute(() -> outward.check());
             }
         }
 
@@ -89,10 +106,6 @@ public final class ComputationTreeComputer {
     private final Object lock = new Object();
     private final Map<ComputationTree<?>, Status<?>> statuses = Maps.newIdentityHashMap();
 
-    private void submitCheck(final Status<?> status) {
-        e.execute(() -> status.checkStart());
-    }
-
     private <V> Status<V> vivify(ComputationTree<V> tree) {
         synchronized(lock) {
             return vivifyHelper(tree);
@@ -100,22 +113,18 @@ public final class ComputationTreeComputer {
     }
 
     private <V> Status<V> vivifyHelper(ComputationTree<V> tree) {
-        Status<V> ret = (Status<V>)statuses.get(tree);
-        if(ret != null) {
-            return ret;
+        Status<V> already = (Status<V>)statuses.get(tree);
+        if(already != null) {
+            return already;
         }
         ImmutableList.Builder<Status<?>> childrenBuilder = ImmutableList.builder();
         for(ComputationTree<?> childTree : tree.children) {
             childrenBuilder.add(vivifyHelper(childTree));
         }
         ImmutableList<Status<?>> children = childrenBuilder.build();
-        ret = new Status<V>(tree, children);
-        for(Status<?> child : children) {
-            synchronized(child) {
-                child.outwards.add(ret);
-            }
-        }
-        submitCheck(ret);
+        Status<V> ret = new Status<V>(tree, children);
+        // avoid doing anything even marginally interesting under synch(lock)
+        e.execute(() -> ret.check());
         statuses.put(tree, ret);
         return ret;
     }
