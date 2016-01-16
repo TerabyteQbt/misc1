@@ -1,14 +1,15 @@
 package misc1.commons.concurrent.ctree;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import misc1.commons.Either;
 import misc1.commons.ExceptionUtils;
 import misc1.commons.Result;
+import org.apache.commons.lang3.ObjectUtils;
 
 public final class ComputationTreeComputer {
     private final Executor e;
@@ -17,13 +18,27 @@ public final class ComputationTreeComputer {
         this.e = e;
     }
 
+    // The lock order in this class is somewhat confusing.  We allow:
+    //
+    // *) synch(Status) -> synch(Status) - when the former depends on the latter.
+    // *) synch(Status) -> synch(lock) - in particular this is necessary for EXEC's use of vivifyHelper.
+    //
+    // We do not allow:
+    //
+    // *) synch(Status) -> synch(Status) - when not a dependency, this forces outwards checks to be asynchronous.
+    // *) synch(lock) -> synch(Status) - this forces vivifyHelper's check to be asynchronous.
+    //
+    // Subject to the assumption that computation trees are acyclic so too is
+    // this lock graph.
+
     private enum StatusStatus {
         UNSTARTED,
         STARTED,
+        EXEC,
         DONE;
     }
     private class Status<V> {
-        private final Function<ImmutableList<Object>, V> postProcess;
+        private final PostProcess<V> postProcess;
         private final ImmutableList<Status<?>> children;
         private final ImmutableList.Builder<Result<?>> childrenResultsBuilder = ImmutableList.builder();
         private int childrenResultsSize = 0;
@@ -35,6 +50,8 @@ public final class ComputationTreeComputer {
 
         private StatusStatus status = StatusStatus.UNSTARTED;
         private final Set<Status<?>> outwards = Sets.newHashSet();
+
+        private Status<V> delegate;
         private Result<V> result;
 
         public synchronized Result<V> getResultOrListen(Status<?> outward) {
@@ -64,7 +81,7 @@ public final class ComputationTreeComputer {
                     e.execute(() -> {
                         // Force all the children results and then postProcess,
                         // all inside callable so we inherit child failures.
-                        Result<V> result = Result.newFromCallable(() -> {
+                        Result<Either<V, ComputationTree<V>>> result = Result.newFromCallable(() -> {
                             ImmutableList.Builder<Object> childrenBuilder = ImmutableList.builder();
                             for(Result<?> childrenResult : childrenResults) {
                                 childrenBuilder.add(childrenResult.getCommute());
@@ -73,15 +90,49 @@ public final class ComputationTreeComputer {
                         });
 
                         // Tag the result.
-                        complete(result);
+                        completeEither(result);
                     });
                     status = StatusStatus.STARTED;
+                    break;
+
+                case EXEC:
+                    Result<V> delegateResult = delegate.getResultOrListen(this);
+                    if(delegateResult == null) {
+                        return;
+                    }
+                    complete(delegateResult);
                     break;
 
                 case STARTED:
                 case DONE:
                     break;
             }
+        }
+
+        private synchronized void completeEither(Result<Either<V, ComputationTree<V>>> intermediate) {
+            if(intermediate.hasThrowable()) {
+                // Failed somewhere along the line, we're done
+                complete(Result.newFailure(intermediate.getThrowable()));
+                return;
+            }
+
+            intermediate.getCommute().visit(new Either.Visitor<V, ComputationTree<V>, ObjectUtils.Null>() {
+                @Override
+                public ObjectUtils.Null left(V result) {
+                    // normal result
+                    complete(Result.newSuccess(result));
+                    return ObjectUtils.NULL;
+                }
+
+                @Override
+                public ObjectUtils.Null right(ComputationTree<V> newDelegate) {
+                    // exec result
+                    delegate = vivifyHelper(newDelegate);
+                    status = StatusStatus.EXEC;
+                    check();
+                    return ObjectUtils.NULL;
+                }
+            });
         }
 
         private synchronized void complete(Result<V> newResult) {

@@ -6,25 +6,26 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import java.util.Map;
+import misc1.commons.Either;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 public final class ComputationTree<V> {
     // hidden
-    private ComputationTree(ImmutableList<ComputationTree<?>> children, Function<ImmutableList<Object>, V> postProcess) {
+    private ComputationTree(ImmutableList<ComputationTree<?>> children, PostProcess<V> postProcess) {
         this.children = children;
         this.postProcess = postProcess;
     }
 
     final ImmutableList<ComputationTree<?>> children;
-    final Function<ImmutableList<Object>, V> postProcess;
+    final PostProcess<V> postProcess;
 
     public static ComputationTree<ObjectUtils.Null> constant() {
         return constant(ObjectUtils.NULL);
     }
 
     public static <V> ComputationTree<V> constant(final V v) {
-        return new ComputationTree<V>(ImmutableList.<ComputationTree<?>>of(), (input) -> v);
+        return new ComputationTree<V>(ImmutableList.<ComputationTree<?>>of(), (input) -> Either.left(v));
     }
 
     @SuppressWarnings("unchecked")
@@ -36,12 +37,12 @@ public final class ComputationTree<V> {
         return new ComputationTree<Pair<A, B>>(ImmutableList.of(lhs, rhs), (input) -> {
             A lhsInner = getElementTyped(input, 0);
             B rhsInner = getElementTyped(input, 1);
-            return Pair.of(lhsInner, rhsInner);
+            return Either.left(Pair.of(lhsInner, rhsInner));
         });
     }
 
     public static <V> ComputationTree<ImmutableList<V>> list(Iterable<ComputationTree<V>> children) {
-        return new ComputationTree<ImmutableList<V>>(ImmutableList.<ComputationTree<?>>copyOf(children), (input) -> (ImmutableList<V>)input);
+        return new ComputationTree<ImmutableList<V>>(ImmutableList.<ComputationTree<?>>copyOf(children), (input) -> Either.left((ImmutableList<V>)input));
     }
 
     public static <K, V> ComputationTree<ImmutableMap<K, V>> map(Map<K, ComputationTree<V>> map) {
@@ -60,7 +61,14 @@ public final class ComputationTree<V> {
     public <W> ComputationTree<W> transform(final Function<? super V, W> fn) {
         return new ComputationTree<W>(ImmutableList.<ComputationTree<?>>of(this), (input) -> {
             V v = getElementTyped(input, 0);
-            return fn.apply(v);
+            return Either.left(fn.apply(v));
+        });
+    }
+
+    public <W> ComputationTree<W> transformExec(Function<V, ComputationTree<W>> fn) {
+        return new ComputationTree<W>(ImmutableList.<ComputationTree<?>>of(this), (input) -> {
+            V v = getElementTyped(input, 0);
+            return Either.right(fn.apply(v));
         });
     }
 
@@ -103,7 +111,7 @@ public final class ComputationTree<V> {
     public static <[[V#]], R> ComputationTree<R> tuple([[ComputationTree<V#> t#]], Tuple#Processor<[[V#]], R> fn) {
         return new ComputationTree<R>(ImmutableList.of([[t#]]), (input) -> {
 {{              V# v# = getElementTyped(input, #);
-}}              return fn.apply([[v#]]);
+}}              return Either.left(fn.apply([[v#]]));
         });
     }
 EOF
@@ -124,7 +132,7 @@ EOF
         return new ComputationTree<R>(ImmutableList.of(t0, t1), (input) -> {
               V0 v0 = getElementTyped(input, 0);
               V1 v1 = getElementTyped(input, 1);
-              return fn.apply(v0, v1);
+              return Either.left(fn.apply(v0, v1));
         });
     }
     public static interface Tuple3Processor<V0, V1, V2, R> {
@@ -135,7 +143,7 @@ EOF
               V0 v0 = getElementTyped(input, 0);
               V1 v1 = getElementTyped(input, 1);
               V2 v2 = getElementTyped(input, 2);
-              return fn.apply(v0, v1, v2);
+              return Either.left(fn.apply(v0, v1, v2));
         });
     }
     public static interface Tuple4Processor<V0, V1, V2, V3, R> {
@@ -147,7 +155,7 @@ EOF
               V1 v1 = getElementTyped(input, 1);
               V2 v2 = getElementTyped(input, 2);
               V3 v3 = getElementTyped(input, 3);
-              return fn.apply(v0, v1, v2, v3);
+              return Either.left(fn.apply(v0, v1, v2, v3));
         });
     }
     public static interface Tuple5Processor<V0, V1, V2, V3, V4, R> {
@@ -160,7 +168,7 @@ EOF
               V2 v2 = getElementTyped(input, 2);
               V3 v3 = getElementTyped(input, 3);
               V4 v4 = getElementTyped(input, 4);
-              return fn.apply(v0, v1, v2, v3, v4);
+              return Either.left(fn.apply(v0, v1, v2, v3, v4));
         });
     }
 }
