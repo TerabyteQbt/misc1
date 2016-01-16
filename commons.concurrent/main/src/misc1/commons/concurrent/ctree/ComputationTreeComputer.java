@@ -3,7 +3,6 @@ package misc1.commons.concurrent.ctree;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -24,9 +23,9 @@ public final class ComputationTreeComputer {
     }
     private class Status {
         private final ComputationTree<?> tree;
-        private final List<Status> children;
+        private final ImmutableList<Status> children;
 
-        public Status(ComputationTree<?> tree, List<Status> children) {
+        public Status(ComputationTree<?> tree, ImmutableList<Status> children) {
             this.tree = tree;
             this.children = children;
         }
