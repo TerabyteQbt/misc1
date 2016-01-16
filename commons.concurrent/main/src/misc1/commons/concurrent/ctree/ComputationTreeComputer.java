@@ -1,5 +1,6 @@
 package misc1.commons.concurrent.ctree;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -22,11 +23,11 @@ public final class ComputationTreeComputer {
         DONE;
     }
     private class Status<V> {
-        private final ComputationTree<V> tree;
+        private final Function<ImmutableList<Object>, V> postProcess;
         private final ImmutableList<Status<?>> children;
 
         public Status(ComputationTree<V> tree, ImmutableList<Status<?>> children) {
-            this.tree = tree;
+            this.postProcess = tree.postProcess;
             this.children = children;
         }
 
@@ -58,7 +59,7 @@ public final class ComputationTreeComputer {
                 for(Result<?> childrenResult : childrenResults) {
                     childrenBuilder.add(childrenResult.getCommute());
                 }
-                return tree.postProcess.apply(childrenBuilder.build());
+                return postProcess.apply(childrenBuilder.build());
             })));
             status = StatusStatus.STARTED;
         }
