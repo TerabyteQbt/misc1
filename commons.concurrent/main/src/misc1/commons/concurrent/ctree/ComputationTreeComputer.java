@@ -21,26 +21,26 @@ public final class ComputationTreeComputer {
         STARTED,
         DONE;
     }
-    private class Status {
-        private final ComputationTree<?> tree;
-        private final ImmutableList<Status> children;
+    private class Status<V> {
+        private final ComputationTree<V> tree;
+        private final ImmutableList<Status<?>> children;
 
-        public Status(ComputationTree<?> tree, ImmutableList<Status> children) {
+        public Status(ComputationTree<V> tree, ImmutableList<Status<?>> children) {
             this.tree = tree;
             this.children = children;
         }
 
         private StatusStatus status = StatusStatus.UNSTARTED;
-        private final Set<Status> outwards = Sets.newHashSet();
-        private Result<Object> result;
+        private final Set<Status<?>> outwards = Sets.newHashSet();
+        private Result<V> result;
 
         public synchronized void checkStart() {
             if(status != StatusStatus.UNSTARTED) {
                 return;
             }
 
-            ImmutableList.Builder<Result<Object>> childrenResultsBuilder = ImmutableList.builder();
-            for(Status child : children) {
+            ImmutableList.Builder<Result<?>> childrenResultsBuilder = ImmutableList.builder();
+            for(Status<?> child : children) {
                 synchronized(child) {
                     switch(child.status) {
                         case DONE:
@@ -52,10 +52,10 @@ public final class ComputationTreeComputer {
                     }
                 }
             }
-            final ImmutableList<Result<Object>> childrenResults = childrenResultsBuilder.build();
+            final ImmutableList<Result<?>> childrenResults = childrenResultsBuilder.build();
             e.execute(() -> complete(Result.newFromCallable(() -> {
                 ImmutableList.Builder<Object> childrenBuilder = ImmutableList.builder();
-                for(Result<Object> childrenResult : childrenResults) {
+                for(Result<?> childrenResult : childrenResults) {
                     childrenBuilder.add(childrenResult.getCommute());
                 }
                 return tree.postProcess.apply(childrenBuilder.build());
@@ -63,7 +63,7 @@ public final class ComputationTreeComputer {
             status = StatusStatus.STARTED;
         }
 
-        private synchronized void complete(Result<Object> newResult) {
+        private synchronized void complete(Result<V> newResult) {
             if(status != StatusStatus.STARTED) {
                 throw new IllegalStateException();
             }
@@ -72,12 +72,12 @@ public final class ComputationTreeComputer {
             result = newResult;
             notifyAll();
 
-            for(final Status outward : outwards) {
+            for(final Status<?> outward : outwards) {
                 submitCheck(outward);
             }
         }
 
-        public synchronized Result<Object> await() throws InterruptedException {
+        public synchronized Result<V> await() throws InterruptedException {
             while(status != StatusStatus.DONE) {
                 wait();
             }
@@ -86,30 +86,30 @@ public final class ComputationTreeComputer {
     }
 
     private final Object lock = new Object();
-    private final Map<ComputationTree<?>, Status> statuses = Maps.newIdentityHashMap();
+    private final Map<ComputationTree<?>, Status<?>> statuses = Maps.newIdentityHashMap();
 
-    private void submitCheck(final Status status) {
+    private void submitCheck(final Status<?> status) {
         e.execute(() -> status.checkStart());
     }
 
-    private Status vivify(ComputationTree<?> tree) {
+    private <V> Status<V> vivify(ComputationTree<V> tree) {
         synchronized(lock) {
             return vivifyHelper(tree);
         }
     }
 
-    private Status vivifyHelper(ComputationTree<?> tree) {
-        Status ret = statuses.get(tree);
+    private <V> Status<V> vivifyHelper(ComputationTree<V> tree) {
+        Status<V> ret = (Status<V>)statuses.get(tree);
         if(ret != null) {
             return ret;
         }
-        ImmutableList.Builder<Status> childrenBuilder = ImmutableList.builder();
+        ImmutableList.Builder<Status<?>> childrenBuilder = ImmutableList.builder();
         for(ComputationTree<?> childTree : tree.children) {
             childrenBuilder.add(vivifyHelper(childTree));
         }
-        ImmutableList<Status> children = childrenBuilder.build();
-        ret = new Status(tree, children);
-        for(Status child : children) {
+        ImmutableList<Status<?>> children = childrenBuilder.build();
+        ret = new Status<V>(tree, children);
+        for(Status<?> child : children) {
             synchronized(child) {
                 child.outwards.add(ret);
             }
@@ -123,14 +123,9 @@ public final class ComputationTreeComputer {
         vivify(tree);
     }
 
-    @SuppressWarnings("unchecked")
-    private static <V> Result<V> castResult(Result<Object> result) {
-        return (Result<V>)result;
-    }
-
     public <V> Result<V> await(ComputationTree<V> tree) {
         try {
-            return castResult(vivify(tree).await());
+            return vivify(tree).await();
         }
         catch(InterruptedException e) {
             throw ExceptionUtils.commute(e);
