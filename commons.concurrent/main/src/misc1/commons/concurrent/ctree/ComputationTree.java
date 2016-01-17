@@ -34,11 +34,7 @@ public final class ComputationTree<V> {
     }
 
     public static <A, B> ComputationTree<Pair<A, B>> pair(ComputationTree<A> lhs, ComputationTree<B> rhs) {
-        return new ComputationTree<Pair<A, B>>(ImmutableList.of(lhs, rhs), (input) -> {
-            A lhsInner = getElementTyped(input, 0);
-            B rhsInner = getElementTyped(input, 1);
-            return Either.left(Pair.of(lhsInner, rhsInner));
-        });
+        return tuple(lhs, rhs, Pair::of);
     }
 
     public static <V> ComputationTree<ImmutableList<V>> list(Iterable<ComputationTree<V>> children) {
@@ -85,11 +81,11 @@ public final class ComputationTree<V> {
     }
 
     public <W> ComputationTree<V> combineLeft(ComputationTree<W> right) {
-        return ComputationTree.pair(this, right).transform(Pair<V, W>::getLeft);
+        return ComputationTree.tuple(this, right, (l, r) -> l);
     }
 
     public <W> ComputationTree<W> combineRight(ComputationTree<W> right) {
-        return ComputationTree.pair(this, right).transform(Pair<V, W>::getRight);
+        return ComputationTree.tuple(this, right, (l, r) -> r);
     }
 
     public static ComputationTree<Boolean> and(Iterable<ComputationTree<Boolean>> inputs) {
