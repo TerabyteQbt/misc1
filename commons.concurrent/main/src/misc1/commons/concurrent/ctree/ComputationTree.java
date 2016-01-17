@@ -69,11 +69,7 @@ public final class ComputationTree<V> {
     }
 
     public static <V, W> ComputationTree<ImmutableList<W>> transformIterable(Iterable<V> inputs, Function<V, W> fn) {
-        ImmutableList.Builder<ComputationTree<W>> outputsBuilder = ImmutableList.builder();
-        for(V input : inputs) {
-            outputsBuilder.add(ComputationTree.constant(input).transform(fn));
-        }
-        return list(outputsBuilder.build());
+        return list(Iterables.transform(inputs, (input) -> ComputationTree.constant(input).transform(fn)));
     }
 
     public ComputationTree<ObjectUtils.Null> ignore() {

@@ -3,6 +3,7 @@ package misc1.commons.options;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -85,11 +86,7 @@ public class OptionsResults<O> {
             }
             return o1.getHelpKey().compareTo(o2.getHelpKey());
         });
-        ImmutableList.Builder<String> b = ImmutableList.builder();
-        for(OptionsFragmentInternals<? super O, ?, ?> optionsFragment : optionsFragments) {
-            b.add(optionsFragment.getHelpDesc());
-        }
-        return b.build();
+        return ImmutableList.copyOf(Iterables.transform(optionsFragments, OptionsFragmentInternals::getHelpDesc));
     }
 
     public static class Builder<O> {

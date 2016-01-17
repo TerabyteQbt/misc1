@@ -1,6 +1,5 @@
 package misc1.commons.ds;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import java.util.Collection;
@@ -50,11 +49,7 @@ public class ImmutableSalvagingMultimap<K, V> {
 
     public Iterable<Map.Entry<K, V>> entries() {
         return Iterables.concat(Iterables.transform(keyMap.entries(), (input) -> {
-            ImmutableList.Builder<Map.Entry<K, V>> b = ImmutableList.builder();
-            for(V v : input.getValue()) {
-                b.add(Maps.immutableEntry(input.getKey(), v));
-            }
-            return b.build();
+            return Iterables.transform(input.getValue(), (v) -> Maps.immutableEntry(input.getKey(), v));
         }));
     }
 
