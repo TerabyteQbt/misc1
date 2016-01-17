@@ -94,4 +94,73 @@ public final class ComputationTree<V> {
             return true;
         });
     }
+
+    /*
+    my $template = <<EOF;
+    public static interface Tuple#Processor<[[V#]], R> {
+        R apply([[V# v#]]);
+    }
+    public static <[[V#]], R> ComputationTree<R> tuple([[ComputationTree<V#> t#]], Tuple#Processor<[[V#]], R> fn) {
+        return new ComputationTree<R>(ImmutableList.of([[t#]]), (input) -> {
+{{              V# v# = getElementTyped(input, #);
+}}              return fn.apply([[v#]]);
+        });
+    }
+EOF
+    sub r { my ($t, $r) = @_; $t =~ s/#/$r/g; return $t }
+    for my $n (2..5) {
+        my $txt = $template;
+        $txt =~ s/\[\[(.*?)\]\]/join(", ", map { r($1, $_) } (0..($n - 1)))/egs;
+        $txt =~ s/\{\{(.*?)\}\}/join("", map { r($1, $_) } (0..($n - 1)))/egs;
+        $txt = r($txt, $n);
+        print $txt;
+    }
+    */
+
+    public static interface Tuple2Processor<V0, V1, R> {
+        R apply(V0 v0, V1 v1);
+    }
+    public static <V0, V1, R> ComputationTree<R> tuple(ComputationTree<V0> t0, ComputationTree<V1> t1, Tuple2Processor<V0, V1, R> fn) {
+        return new ComputationTree<R>(ImmutableList.of(t0, t1), (input) -> {
+              V0 v0 = getElementTyped(input, 0);
+              V1 v1 = getElementTyped(input, 1);
+              return fn.apply(v0, v1);
+        });
+    }
+    public static interface Tuple3Processor<V0, V1, V2, R> {
+        R apply(V0 v0, V1 v1, V2 v2);
+    }
+    public static <V0, V1, V2, R> ComputationTree<R> tuple(ComputationTree<V0> t0, ComputationTree<V1> t1, ComputationTree<V2> t2, Tuple3Processor<V0, V1, V2, R> fn) {
+        return new ComputationTree<R>(ImmutableList.of(t0, t1, t2), (input) -> {
+              V0 v0 = getElementTyped(input, 0);
+              V1 v1 = getElementTyped(input, 1);
+              V2 v2 = getElementTyped(input, 2);
+              return fn.apply(v0, v1, v2);
+        });
+    }
+    public static interface Tuple4Processor<V0, V1, V2, V3, R> {
+        R apply(V0 v0, V1 v1, V2 v2, V3 v3);
+    }
+    public static <V0, V1, V2, V3, R> ComputationTree<R> tuple(ComputationTree<V0> t0, ComputationTree<V1> t1, ComputationTree<V2> t2, ComputationTree<V3> t3, Tuple4Processor<V0, V1, V2, V3, R> fn) {
+        return new ComputationTree<R>(ImmutableList.of(t0, t1, t2, t3), (input) -> {
+              V0 v0 = getElementTyped(input, 0);
+              V1 v1 = getElementTyped(input, 1);
+              V2 v2 = getElementTyped(input, 2);
+              V3 v3 = getElementTyped(input, 3);
+              return fn.apply(v0, v1, v2, v3);
+        });
+    }
+    public static interface Tuple5Processor<V0, V1, V2, V3, V4, R> {
+        R apply(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4);
+    }
+    public static <V0, V1, V2, V3, V4, R> ComputationTree<R> tuple(ComputationTree<V0> t0, ComputationTree<V1> t1, ComputationTree<V2> t2, ComputationTree<V3> t3, ComputationTree<V4> t4, Tuple5Processor<V0, V1, V2, V3, V4, R> fn) {
+        return new ComputationTree<R>(ImmutableList.of(t0, t1, t2, t3, t4), (input) -> {
+              V0 v0 = getElementTyped(input, 0);
+              V1 v1 = getElementTyped(input, 1);
+              V2 v2 = getElementTyped(input, 2);
+              V3 v3 = getElementTyped(input, 3);
+              V4 v4 = getElementTyped(input, 4);
+              return fn.apply(v0, v1, v2, v3, v4);
+        });
+    }
 }
