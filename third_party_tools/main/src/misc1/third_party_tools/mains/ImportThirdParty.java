@@ -342,7 +342,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
         pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.ARCH_INDEPENDENT, true));
         pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.PREFIX, Maybe.of(packagePath)));
-        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.QBT_ENV, ImmutableSet.of("JDK")));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.QBT_ENV, ImmutableMap.of("JDK", Maybe.not())));
 
         // add deps
         for(String dep : dependencyEdges.get(packageName)) {
