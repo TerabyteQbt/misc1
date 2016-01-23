@@ -1,6 +1,6 @@
 #!/bin/bash
 
-eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK:-1_8}_HOME
+eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK}_HOME
 
 set -e
 
