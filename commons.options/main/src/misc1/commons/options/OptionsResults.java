@@ -131,8 +131,17 @@ public class OptionsResults<O> {
         public OptionsResults<O> build() {
             ImmutableMap.Builder<OptionsFragmentInternals<? super O, ?, ?>, Optional<Object>> b = ImmutableMap.builder();
 
+            OptionsException err = null;
             for(Map.Entry<OptionsFragmentInternals<? super O, ?, ?>, OptionsFragmentStatus<?, ?>> e : statuses.entrySet()) {
-                b.put(e.getKey(), Optional.<Object>fromNullable(e.getValue().complete()));
+                try {
+                    b.put(e.getKey(), Optional.<Object>fromNullable(e.getValue().complete()));
+                }
+                catch(OptionsException err2) {
+                    err = err == null ? err2 : err.join(err2);
+                }
+            }
+            if(err != null) {
+                throw err;
             }
 
             return new OptionsResults<O>(b.build());
