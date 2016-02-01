@@ -1,7 +1,6 @@
 package misc1.commons.concurrent.ctree;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Map;
@@ -169,7 +168,11 @@ public final class ComputationTreeComputer {
         if(already != null) {
             return already;
         }
-        ImmutableList<Status<?>> children = ImmutableList.copyOf(Iterables.transform(tree.children, this::vivifyHelper));
+        ImmutableList.Builder<Status<?>> childrenBuilder = ImmutableList.builder();
+        for(ComputationTree<?> childTree : tree.children) {
+            childrenBuilder.add(vivifyHelper(childTree));
+        }
+        ImmutableList<Status<?>> children = childrenBuilder.build();
         Status<V> ret = new Status<V>(tree, children);
         // avoid doing anything even marginally interesting under synch(lock)
         e.execute(() -> ret.check());
