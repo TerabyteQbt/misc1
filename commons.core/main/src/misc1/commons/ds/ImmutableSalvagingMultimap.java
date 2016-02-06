@@ -49,7 +49,7 @@ public class ImmutableSalvagingMultimap<K, V> {
 
     public Iterable<Map.Entry<K, V>> entries() {
         return Iterables.concat(Iterables.transform(keyMap.entries(), (input) -> {
-            return Iterables.transform(input.getValue(), (v) -> Maps.immutableEntry(input.getKey(), v));
+            return Iterables.transform(input.getValue(), (V v) -> Maps.immutableEntry(input.getKey(), v));
         }));
     }
 
