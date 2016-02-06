@@ -1,5 +1,6 @@
 package misc1.commons.concurrent.ctree;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -169,7 +170,12 @@ public final class ComputationTreeComputer {
         if(already != null) {
             return already;
         }
-        ImmutableList<Status<?>> children = ImmutableList.copyOf(Iterables.transform(tree.children, this::vivifyHelper));
+        // Cannot replace this with lambda because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=487383
+        ImmutableList<Status<?>> children = ImmutableList.copyOf(Iterables.transform(tree.children, new Function<ComputationTree<?>, Status<?>>() {
+            public Status<?> apply(ComputationTree<?> in) {
+                return vivifyHelper(in);
+            }
+        }));
         Status<V> ret = new Status<V>(tree, children);
         // avoid doing anything even marginally interesting under synch(lock)
         e.execute(() -> ret.check());
