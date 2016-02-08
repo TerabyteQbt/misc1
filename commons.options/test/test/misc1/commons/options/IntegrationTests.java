@@ -1,6 +1,7 @@
 package misc1.commons.options;
 
 import com.google.common.collect.ImmutableList;
+import misc1.commons.Maybe;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Assert;
 import org.junit.Test;
@@ -162,5 +163,20 @@ public class IntegrationTests {
         Assert.assertEquals(s1, r.get(TestCombinedOptions.s1));
         Assert.assertEquals(f, r.get(TestCombinedOptions.f));
         Assert.assertEquals(x, r.get(TestCombinedOptions.x));
+    }
+
+    public static class TestTrinaryFlag {
+        public static final OptionsLibrary<TestTrinaryFlag> o = OptionsLibrary.of();
+        public static final OptionsFragment<TestTrinaryFlag, Maybe<Boolean>> flag = o.zeroTrinary("flag");
+    }
+
+    @Test
+    public void testTrinaryFlag() {
+        OptionsResults<TestTrinaryFlag> result = OptionsResults.parse(TestTrinaryFlag.class, "--flag");
+        Assert.assertEquals(Maybe.of(true), OptionsResults.parse(TestTrinaryFlag.class, "--flag").get(TestTrinaryFlag.flag));
+        Assert.assertEquals(Maybe.of(true), OptionsResults.parse(TestTrinaryFlag.class, "--flag=true").get(TestTrinaryFlag.flag));
+        Assert.assertEquals(Maybe.of(false), OptionsResults.parse(TestTrinaryFlag.class, "--flag=false").get(TestTrinaryFlag.flag));
+        Assert.assertEquals(Maybe.not(), OptionsResults.parse(TestTrinaryFlag.class, "--flag=unset").get(TestTrinaryFlag.flag));
+        Assert.assertEquals(Maybe.not(), OptionsResults.parse(TestTrinaryFlag.class).get(TestTrinaryFlag.flag));
     }
 }
