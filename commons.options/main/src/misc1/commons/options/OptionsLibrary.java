@@ -1,6 +1,7 @@
 package misc1.commons.options;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import misc1.commons.Maybe;
 import misc1.commons.ds.LazyCollector;
 import org.apache.commons.lang3.ObjectUtils;
@@ -164,6 +165,28 @@ public final class OptionsLibrary<O> {
             }
         };
         return of(matcher);
+    }
+
+    public OptionsFragment<O, Maybe<Boolean>> trinary(String... names) {
+        return oneArg(names).transform((helpDesc, list) -> {
+            if(list.isEmpty()) {
+                return Maybe.not();
+            }
+            if(list.size() > 1) {
+                throw new OptionsException("Must be specified exactly zero or one times: " + helpDesc);
+            }
+            String val = Iterables.getOnlyElement(list);
+            if(val.equalsIgnoreCase("true")) {
+                return Maybe.of(true);
+            }
+            if(val.equalsIgnoreCase("false")) {
+                return Maybe.of(false);
+            }
+            if(val.equalsIgnoreCase("unset")) {
+                return Maybe.not();
+            }
+            throw new OptionsException("Must be one of 'true', 'false', or 'unset': " + helpDesc);
+        });
     }
 
     public <M> OptionsFragment<O, ImmutableList<M>> of(OptionsMatcher<M> matcher) {
