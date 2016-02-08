@@ -1,6 +1,7 @@
 package misc1.commons.options;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -8,12 +9,17 @@ public class IntegrationTests {
     public static class TestStringOptions {
         public static final OptionsLibrary<TestStringOptions> o = OptionsLibrary.of();
         public static final OptionsFragment<TestStringOptions, String> s1 = o.oneArg("s1").transform(o.singleton());
+        public static final OptionsFragment<TestStringOptions, Pair<String, String>> pair = o.twoArg("pair").transform(o.singleton(Pair.of("a", "b")));
     }
 
     @Test
     public void testString() {
         OptionsResults<TestStringOptions> result = OptionsResults.parse(TestStringOptions.class, "--s1", "val");
         Assert.assertEquals("val", result.get(TestStringOptions.s1));
+        Assert.assertEquals(Pair.of("a", "b"), result.get(TestStringOptions.pair));
+
+        result = OptionsResults.parse(TestStringOptions.class, "--s1", "blah", "--pair", "val1", "val2");
+        Assert.assertEquals(Pair.of("val1", "val2"), result.get(TestStringOptions.pair));
 
         try {
             OptionsResults.parse(TestStringOptions.class);
@@ -33,6 +39,30 @@ public class IntegrationTests {
 
         try {
             OptionsResults.parse(TestStringOptions.class, "--s1", "val1", "--s1", "val2");
+            Assert.fail();
+        }
+        catch(OptionsException e) {
+            // expected
+        }
+
+        try {
+            OptionsResults.parse(TestStringOptions.class, "--s1", "val1", "--s1", "val2", "--pair", "justonevalue");
+            Assert.fail();
+        }
+        catch(OptionsException e) {
+            // expected
+        }
+
+        try {
+            OptionsResults.parse(TestStringOptions.class, "--pair", "justonevalueinthemiddle", "--s1", "val1", "--s1", "val2");
+            Assert.fail();
+        }
+        catch(OptionsException e) {
+            // expected
+        }
+
+        try {
+            OptionsResults.parse(TestStringOptions.class, "--s1", "val1", "--s1", "val2", "--pair");
             Assert.fail();
         }
         catch(OptionsException e) {

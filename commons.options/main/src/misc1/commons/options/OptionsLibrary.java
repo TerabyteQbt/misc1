@@ -125,6 +125,47 @@ public final class OptionsLibrary<O> {
         return of(matcher);
     }
 
+    public OptionsFragment<O, ImmutableList<Pair<String, String>>> twoArg(String... names) {
+        OptionsMatcher<Pair<String, String>> matcher = new OptionsMatcher<Pair<String, String>>() {
+            @Override
+            public int getPriority() {
+                return 0;
+            }
+
+            @Override
+            public Pair<Pair<String, String>, ArgsView> match(ArgsView args) {
+                String arg0 = args.get(0);
+                for(String name : names) {
+                    if(name.length() == 1) {
+                        if(arg0.equals("-" + name) && args.size() >= 3) {
+                            return Pair.of(Pair.of(args.get(1), args.get(2)), args.subList(3));
+                        }
+                    }
+                    else {
+                        if(arg0.equals("--" + name) && args.size() >= 3) {
+                            return Pair.of(Pair.of(args.get(1), args.get(2)), args.subList(3));
+                        }
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public String getHelpKey() {
+                return names[0];
+            }
+
+            @Override
+            public String getHelpDesc() {
+                StringBuilder sb = new StringBuilder();
+                buildHelpDesc(sb, names);
+                sb.append(" <arg>");
+                return sb.toString();
+            }
+        };
+        return of(matcher);
+    }
+
     public <M> OptionsFragment<O, ImmutableList<M>> of(OptionsMatcher<M> matcher) {
         OptionsFragmentInternals<O, M, ImmutableList<M>> delegate = new OptionsFragmentInternals<O, M, ImmutableList<M>>(matcher, (helpDesc, input) -> input, null);
         return new OptionsFragment<O, ImmutableList<M>>(delegate);
