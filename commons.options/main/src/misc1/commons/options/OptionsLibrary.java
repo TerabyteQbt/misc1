@@ -1,6 +1,7 @@
 package misc1.commons.options;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import misc1.commons.Maybe;
 import misc1.commons.ds.LazyCollector;
 import org.apache.commons.lang3.ObjectUtils;
@@ -166,6 +167,56 @@ public final class OptionsLibrary<O> {
         return of(matcher);
     }
 
+    public OptionsFragment<O, ImmutableList<Maybe<Boolean>>> trinaryZero(String... names) {
+        OptionsMatcher<Maybe<Boolean>> matcher = new OptionsMatcher<Maybe<Boolean>>() {
+            @Override
+            public int getPriority() {
+                return 0;
+            }
+
+            @Override
+            public Pair<Maybe<Boolean>, ArgsView> match(ArgsView args) {
+                String arg0 = args.get(0);
+                for(String name : names) {
+                    String prefix = "--";
+                    if(name.length() == 1) {
+                        prefix = "-";
+                    }
+
+                    if(arg0.startsWith(prefix + name)) {
+                        if(arg0.equals(prefix + name)) {
+                            return Pair.of(Maybe.of(true), args.subList(1));
+                        }
+                        if(arg0.equals(prefix + name +"=true")) {
+                            return Pair.of(Maybe.of(true), args.subList(1));
+                        }
+                        if(arg0.equals(prefix + name +"=false")) {
+                            return Pair.of(Maybe.of(false), args.subList(1));
+                        }
+                        if(arg0.equals(prefix + name +"=unset")) {
+                            return Pair.of(Maybe.not(), args.subList(1));
+                        }
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public String getHelpKey() {
+                return names[0];
+            }
+
+            @Override
+            public String getHelpDesc() {
+                StringBuilder sb = new StringBuilder();
+                buildHelpDesc(sb, names);
+                sb.append("=[true|false|unset]");
+                return sb.toString();
+            }
+        };
+        return of(matcher);
+    }
+
     public <M> OptionsFragment<O, ImmutableList<M>> of(OptionsMatcher<M> matcher) {
         OptionsFragmentInternals<O, M, ImmutableList<M>> delegate = new OptionsFragmentInternals<O, M, ImmutableList<M>>(matcher, (helpDesc, input) -> input, null);
         return new OptionsFragment<O, ImmutableList<M>>(delegate);
@@ -291,6 +342,18 @@ public final class OptionsLibrary<O> {
                 default:
                     throw new OptionsException("Must be specified exactly zero or one times: " + helpDesc);
             }
+        };
+    }
+
+    public <T> OptionsTransform<ImmutableList<Maybe<T>>, Maybe<T>> trinaryFlag() {
+        return (helpDesc, list) -> {
+            if(list.isEmpty()) {
+                return Maybe.not();
+            }
+            if(list.size() > 1) {
+                throw new OptionsException("Must be specified exactly zero or one times: " + helpDesc);
+            }
+            return Iterables.getOnlyElement(list);
         };
     }
 
