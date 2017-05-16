@@ -89,7 +89,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
     public int run(OptionsResults<? extends Options> options) throws Exception {
         QbtConfig config = Options.config.getConfig(options);
         ManifestOptionsResult manifestResult = Options.manifest.getResult(options);
-        QbtManifest manifest = manifestResult.parse();
+        QbtManifest manifest = manifestResult.parse(config.manifestParser);
 
         String repo = options.get(Options.destinationRepo);
         RepoTip destinationRepo = RepoTip.TYPE.parseRequire(repo);
@@ -331,7 +331,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             return 0;
         }
         // Update the manifest
-        manifestResult.deparse(newManifest.build());
+        manifestResult.deparse(config.manifestParser, newManifest.build());
 
         return 0;
     }
