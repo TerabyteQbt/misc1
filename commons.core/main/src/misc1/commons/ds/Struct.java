@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMap;
 
 public class Struct<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
     private final StructType<S, B> type;
-    private final ImmutableMap<StructKey<S, ?, ?>, Object> map;
+    protected final ImmutableMap<StructKey<S, ?, ?>, Object> map;
 
     protected Struct(StructType<S, B> type, ImmutableMap<StructKey<S, ?, ?>, Object> map) {
         this.type = type;
