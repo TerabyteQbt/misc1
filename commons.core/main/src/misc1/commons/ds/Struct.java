@@ -1,5 +1,6 @@
 package misc1.commons.ds;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 
 public class Struct<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
@@ -17,6 +18,10 @@ public class Struct<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
 
     public <VB> S set(StructKey<S, ?, VB> k, VB vb) {
         return builder().set(k, vb).build();
+    }
+
+    public <VB> S transform(StructKey<S, ?, VB> k, Function<VB, VB> f) {
+        return builder().transform(k, f).build();
     }
 
     @Override
