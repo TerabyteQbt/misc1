@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import java.util.Map;
+import java.util.function.Supplier;
 import misc1.commons.Either;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -26,6 +27,10 @@ public final class ComputationTree<V> {
 
     public static <V> ComputationTree<V> constant(final V v) {
         return new ComputationTree<V>(ImmutableList.<ComputationTree<?>>of(), (input) -> Either.left(v));
+    }
+
+    public static <V> ComputationTree<V> ofSupplier(Supplier<V> fn) {
+        return new ComputationTree<V>(ImmutableList.<ComputationTree<?>>of(), (input) -> Either.left(fn.get()));
     }
 
     @SuppressWarnings("unchecked")
