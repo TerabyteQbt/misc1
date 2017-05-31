@@ -5,14 +5,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Objects;
 
 public abstract class Either<L, R> {
-    protected final boolean isLeft;
-    protected final L l;
-    protected final R r;
-
-    private Either(boolean isLeft, L l, R r) {
-        this.isLeft = isLeft;
-        this.l = l;
-        this.r = r;
+    private Either() {
     }
 
     public interface Visitor<L, R, V> {
@@ -20,77 +13,49 @@ public abstract class Either<L, R> {
         public V right(R r);
     }
 
-    public abstract <V> V visit(Visitor<L, R, V> visitor);
-
-    private static final class EitherLeft<L, R> extends Either<L, R> {
-        public EitherLeft(L l) {
-            super(true, l, null);
-        }
-
-        @Override
-        public <V> V visit(misc1.commons.Either.Visitor<L, R, V> visitor) {
-            return visitor.left(l);
-        }
-
-        @Override
-        public <L2, R2> Either<L2, R2> transform(Function<L, L2> leftFunction, Function<R, R2> rightFunction) {
-            return new EitherLeft<L2, R2>(leftFunction.apply(l));
-        }
-
-        @Override
-        public String toString() {
-            return "EitherLeft(" + l + ")";
-        }
+    public <V> V visit(Visitor<L, R, V> visitor) {
+        return accept(visitor::left, visitor::right);
     }
+
+    public abstract <V> V accept(Function<L, V> onLeft, Function<R, V> onRight);
 
     public static <L, R> Either<L, R> left(L l) {
-        return new EitherLeft<L, R>(l);
-    }
-
-    private static final class EitherRight<L, R> extends Either<L, R> {
-        public EitherRight(R r) {
-            super(false, null, r);
-        }
-
-        @Override
-        public <V> V visit(misc1.commons.Either.Visitor<L, R, V> visitor) {
-            return visitor.right(r);
-        }
-
-        @Override
-        public <L2, R2> Either<L2, R2> transform(Function<L, L2> leftFunction, Function<R, R2> rightFunction) {
-            return new EitherRight<L2, R2>(rightFunction.apply(r));
-        }
-
-        @Override
-        public String toString() {
-            return "EitherRight(" + r + ")";
-        }
+        return new Either<L, R>() {
+            @Override
+            public <V> V accept(Function<L, V> onLeft, Function<R, V> onRight) {
+                return onLeft.apply(l);
+            }
+        };
     }
 
     public static <L, R> Either<L, R> right(R r) {
-        return new EitherRight<L, R>(r);
+        return new Either<L, R>() {
+            @Override
+            public <V> V accept(Function<L, V> onLeft, Function<R, V> onRight) {
+                return onRight.apply(r);
+            }
+        };
     }
 
     public L leftOrNull() {
-        return l;
+        return accept(l -> l, r -> null);
     }
 
     public R rightOrNull() {
-        return r;
+        return accept(l -> null, r -> r);
     }
 
     public boolean isLeft() {
-        return isLeft;
+        return accept(l -> true, r -> false);
     }
 
     public boolean isRight() {
-        return !isLeft;
+        return accept(l -> false, r -> true);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(isLeft, l, r);
+        return accept(l -> Objects.hashCode(true, l), r -> Objects.hashCode(false, r));
     }
 
     @Override
@@ -99,19 +64,12 @@ public abstract class Either<L, R> {
             return false;
         }
         Either<?, ?> other = (Either<?, ?>)obj;
-        if(isLeft != other.isLeft) {
-            return false;
-        }
-        if(!Objects.equal(l, other.l)) {
-            return false;
-        }
-        if(!Objects.equal(r, other.r)) {
-            return false;
-        }
-        return true;
+        return accept(l -> other.accept(l2 -> Objects.equal(l, l2), r2 -> false), r -> other.accept(l2 -> false, r2 -> Objects.equal(r, r2)));
     }
 
-    public abstract <L2, R2> Either<L2, R2> transform(Function<L, L2> leftFunction, Function<R, R2> rightFunction);
+    public <L2, R2> Either<L2, R2> transform(Function<L, L2> leftFunction, Function<R, R2> rightFunction) {
+        return accept(l -> Either.<L2, R2>left(leftFunction.apply(l)), r -> Either.<L2, R2>right(rightFunction.apply(r)));
+    }
 
     public <L2> Either<L2, R> transformLeft(Function<L, L2> function) {
         return transform(function, Functions.<R>identity());
