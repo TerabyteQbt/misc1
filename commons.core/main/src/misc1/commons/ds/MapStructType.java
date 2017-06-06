@@ -6,7 +6,7 @@ import misc1.commons.merge.Merge;
 import misc1.commons.merge.Merges;
 import org.apache.commons.lang3.tuple.Triple;
 
-public abstract class MapStructType<S extends MapStruct<S, B, K, VS, VB>, B, K, VS, VB> {
+public abstract class MapStructType<S extends MapStruct<S, B, K, VS, VB>, B extends MapStructBuilder<S, B, K, VS, VB>, K, VS, VB> {
     protected abstract S create(ImmutableMap<K, VS> map);
     protected abstract B createBuilder(ImmutableSalvagingMap<K, VB> map);
     protected abstract VS toStruct(VB vb);
