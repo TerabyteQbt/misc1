@@ -21,10 +21,10 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 import misc1.commons.ExceptionUtils;
 import misc1.commons.ds.ImmutableSalvagingMap;
-import misc1.commons.ds.SimpleStructKey;
 import misc1.commons.ds.StructBuilder;
 import misc1.commons.ds.StructKey;
 import misc1.commons.ds.StructType;
+import misc1.commons.ds.StructTypeBuilder;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,24 +38,24 @@ public class ProcessHelper extends StructBuilder<ProcessHelperStruct, ProcessHel
         super(TYPE, map);
     }
 
-    public static final SimpleStructKey<ProcessHelperStruct, Path> DIR;
-    public static final SimpleStructKey<ProcessHelperStruct, ImmutableList<String>> CMD;
-    public static final SimpleStructKey<ProcessHelperStruct, ImmutableSalvagingMap<String, String>> ENV;
-    public static final SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect> IN;
-    public static final SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect> OUT;
-    public static final SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect> ERR;
+    public static final StructKey<ProcessHelperStruct, Path, Path> DIR;
+    public static final StructKey<ProcessHelperStruct, ImmutableList<String>, ImmutableList<String>> CMD;
+    public static final StructKey<ProcessHelperStruct, ImmutableSalvagingMap<String, String>, ImmutableSalvagingMap<String, String>> ENV;
+    public static final StructKey<ProcessHelperStruct, ProcessBuilder.Redirect, ProcessBuilder.Redirect> IN;
+    public static final StructKey<ProcessHelperStruct, ProcessBuilder.Redirect, ProcessBuilder.Redirect> OUT;
+    public static final StructKey<ProcessHelperStruct, ProcessBuilder.Redirect, ProcessBuilder.Redirect> ERR;
     static final StructType<ProcessHelperStruct, ProcessHelper> TYPE;
     static {
-        ImmutableList.Builder<StructKey<ProcessHelperStruct, ?, ?>> b = ImmutableList.builder();
+        StructTypeBuilder<ProcessHelperStruct, ProcessHelper> b = new StructTypeBuilder<>(ProcessHelperStruct::new, ProcessHelper::new);
 
-        b.add(DIR = new SimpleStructKey<ProcessHelperStruct, Path>("dir"));
-        b.add(CMD = new SimpleStructKey<ProcessHelperStruct, ImmutableList<String>>("cmd"));
-        b.add(ENV = new SimpleStructKey<ProcessHelperStruct, ImmutableSalvagingMap<String, String>>("env"));
-        b.add(IN = new SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect>("in", ProcessBuilder.Redirect.PIPE));
-        b.add(OUT = new SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect>("out", ProcessBuilder.Redirect.PIPE));
-        b.add(ERR = new SimpleStructKey<ProcessHelperStruct, ProcessBuilder.Redirect>("err", ProcessBuilder.Redirect.PIPE));
+        DIR = b.<Path>key("dir").add();
+        CMD = b.<ImmutableList<String>>key("cmd").add();
+        ENV = b.<ImmutableSalvagingMap<String, String>>key("env").add();
+        IN = b.<ProcessBuilder.Redirect>key("in").def(ProcessBuilder.Redirect.PIPE).add();
+        OUT = b.<ProcessBuilder.Redirect>key("out").def(ProcessBuilder.Redirect.PIPE).add();
+        ERR = b.<ProcessBuilder.Redirect>key("err").def(ProcessBuilder.Redirect.PIPE).add();
 
-        TYPE = new StructType<ProcessHelperStruct, ProcessHelper>(b.build(), ProcessHelperStruct::new, ProcessHelper::new);
+        TYPE = b.build();
     }
 
     public ProcessHelper inheritInput() {
