@@ -19,7 +19,7 @@ public abstract class StructBuilder<S extends Struct<S, B>, B extends StructBuil
         if(map.containsKey(k)) {
             return (VB)map.get(k);
         }
-        return k.getDefault().get();
+        return k.def.get();
     }
 
     public <VB> B transform(StructKey<S, ?, VB> k, Function<VB, VB> f) {

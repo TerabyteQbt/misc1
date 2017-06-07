@@ -1,41 +1,26 @@
 package misc1.commons.ds;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import misc1.commons.merge.Merge;
-import misc1.commons.merge.Merges;
 
-public abstract class StructKey<S, VS, VB> {
+public final class StructKey<S, VS, VB> {
     public final String name;
-    private final Optional<VB> def;
+    final Optional<VB> def;
+    final Function<VB, VS> toStruct;
+    final Function<VS, VB> toBuilder;
+    final Merge<VS> merge;
 
-    public StructKey(String name) {
-        this.name = name;
-        this.def = Optional.absent();
-    }
-
-    public StructKey(String name, VB vb) {
-        this.name = name;
-        this.def = Optional.of(vb);
-    }
-
-    public StructKey(String name, Optional<VB> def) {
+    public StructKey(String name, Optional<VB> def, Function<VB, VS> toStruct, Function<VS, VB> toBuilder, Merge<VS> merge) {
         this.name = name;
         this.def = def;
-    }
-
-    public Optional<VB> getDefault() {
-        return def;
+        this.toStruct = toStruct;
+        this.toBuilder = toBuilder;
+        this.merge = merge;
     }
 
     @Override
     public String toString() {
         return name;
-    }
-
-    public abstract VS toStruct(VB vb);
-    public abstract VB toBuilder(VS vs);
-
-    public Merge<VS> merge() {
-        return Merges.trivial();
     }
 }

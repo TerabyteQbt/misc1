@@ -42,22 +42,7 @@ public class StructTypeBuilder<S extends Struct<S, B>, B extends StructBuilder<S
         }
 
         public StructKey<S, VS, VB> add() {
-            StructKey<S, VS, VB> key = new StructKey<S, VS, VB>(name, def) {
-                @Override
-                public VS toStruct(VB vb) {
-                    return toStruct.apply(vb);
-                }
-
-                @Override
-                public VB toBuilder(VS vs) {
-                    return toBuilder.apply(vs);
-                }
-
-                @Override
-                public Merge<VS> merge() {
-                    return merge;
-                }
-            };
+            StructKey<S, VS, VB> key = new StructKey<>(name, def, toStruct, toBuilder, merge);
             keys.add(key);
             return key;
         }

@@ -1,7 +1,6 @@
 package misc1.commons.ds;
 
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import misc1.commons.ds.ImmutableSalvagingMap;
@@ -13,7 +12,7 @@ public class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
     final Function<ImmutableMap<StructKey<S, ?, ?>, Object>, S> structCtor;
     final Function<ImmutableSalvagingMap<StructKey<S, ?, ?>, Object>, B> builderCtor;
 
-    public StructType(Iterable<StructKey<S, ?, ?>> keys, Function<ImmutableMap<StructKey<S, ?, ?>, Object>, S> structCtor, Function<ImmutableSalvagingMap<StructKey<S, ?, ?>, Object>, B> builderCtor) {
+    StructType(Iterable<StructKey<S, ?, ?>> keys, Function<ImmutableMap<StructKey<S, ?, ?>, Object>, S> structCtor, Function<ImmutableSalvagingMap<StructKey<S, ?, ?>, Object>, B> builderCtor) {
         this.keys = ImmutableList.copyOf(keys);
         this.structCtor = structCtor;
         this.builderCtor = builderCtor;
@@ -28,9 +27,8 @@ public class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
     }
 
     private static <S, VS, VB> ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> copyDefault(ImmutableSalvagingMap<StructKey<S, ?, ?>, Object> b, StructKey<S, VS, VB> key) {
-        Optional<VB> mvb = key.getDefault();
-        if(mvb.isPresent()) {
-            b = b.simplePut(key, mvb.get());
+        if(key.def.isPresent()) {
+            b = b.simplePut(key, key.def.get());
         }
         return b;
     }
@@ -53,7 +51,7 @@ public class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
         if(vb == null) {
             throw new IllegalArgumentException("Key required: " + k);
         }
-        VS vs = k.toStruct(vb);
+        VS vs = k.toStruct.apply(vb);
         b.put(k, vs);
     }
 
@@ -64,7 +62,7 @@ public class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
             final ImmutableMap.Builder<StructKey<S, ?, ?>, Object> rhsB = ImmutableMap.builder();
             class Helper {
                 private <VS, VB> void mergeKey(StructKey<S, VS, VB> k) {
-                    Triple<VS, VS, VS> r = k.merge().merge(lhs.get(k), mhs.get(k), rhs.get(k));
+                    Triple<VS, VS, VS> r = k.merge.merge(lhs.get(k), mhs.get(k), rhs.get(k));
                     lhsB.put(k, r.getLeft());
                     mhsB.put(k, r.getMiddle());
                     rhsB.put(k, r.getRight());

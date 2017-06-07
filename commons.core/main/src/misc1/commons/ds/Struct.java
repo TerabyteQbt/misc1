@@ -56,6 +56,6 @@ public class Struct<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
 
     private <VS, VB> B copyKey(B b, StructKey<S, VS, VB> k) {
         VS vs = get(k);
-        return b.set(k, k.toBuilder(vs));
+        return b.set(k, k.toBuilder.apply(vs));
     }
 }
