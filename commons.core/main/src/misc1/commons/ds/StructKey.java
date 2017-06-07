@@ -18,6 +18,11 @@ public abstract class StructKey<S, VS, VB> {
         this.def = Optional.of(vb);
     }
 
+    public StructKey(String name, Optional<VB> def) {
+        this.name = name;
+        this.def = def;
+    }
+
     public Optional<VB> getDefault() {
         return def;
     }
