@@ -4,6 +4,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import misc1.commons.json.JsonSerializer;
 import misc1.commons.merge.Merge;
 import misc1.commons.merge.Merges;
 
@@ -24,6 +25,7 @@ public class StructTypeBuilder<S extends Struct<S, B>, B extends StructBuilder<S
 
         private Optional<VB> def = Optional.absent();
         private Merge<VS> merge = Merges.trivial();
+        private Optional<JsonSerializer<VB>> serializer = Optional.absent();
 
         private StructKeyBuilder(String name, Function<VB, VS> toStruct, Function<VS, VB> toBuilder) {
             this.name = name;
@@ -41,8 +43,18 @@ public class StructTypeBuilder<S extends Struct<S, B>, B extends StructBuilder<S
             return this;
         }
 
+        public StructKeyBuilder<VS, VB> serializer(JsonSerializer<VB> serializer) {
+            this.serializer = Optional.of(serializer);
+            return this;
+        }
+
+        public StructKeyBuilder<VS, VB> serializer(Optional<JsonSerializer<VB>> serializer) {
+            this.serializer = serializer;
+            return this;
+        }
+
         public StructKey<S, VS, VB> add() {
-            StructKey<S, VS, VB> key = new StructKey<>(name, def, toStruct, toBuilder, merge);
+            StructKey<S, VS, VB> key = new StructKey<>(name, def, toStruct, toBuilder, merge, serializer);
             keys.add(key);
             return key;
         }
@@ -57,11 +69,11 @@ public class StructTypeBuilder<S extends Struct<S, B>, B extends StructBuilder<S
     }
 
     public <VS extends MapStruct<VS, VB, K, VVS, VVB>, VB extends MapStructBuilder<VS, VB, K, VVS, VVB>, K, VVS, VVB> StructKeyBuilder<VS, VB> key(String name, MapStructType<VS, VB, K, VVS, VVB> type) {
-        return new StructKeyBuilder<>(name, VB::build, VS::builder).def(type.builder());
+        return new StructKeyBuilder<>(name, VB::build, VS::builder).def(type.builder()).serializer(type.serializerBOptional());
     }
 
     public <VS extends Struct<VS, VB>, VB extends StructBuilder<VS, VB>> StructKeyBuilder<VS, VB> key(String name, StructType<VS, VB> type) {
-        return new StructKeyBuilder<>(name, VB::build, VS::builder).def(type.builder());
+        return new StructKeyBuilder<>(name, VB::build, VS::builder).def(type.builder()).serializer(type.serializerBOptional());
     }
 
     public StructType<S, B> build() {

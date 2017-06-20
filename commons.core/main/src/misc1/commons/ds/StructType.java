@@ -1,9 +1,16 @@
 package misc1.commons.ds;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import java.util.Map;
+import java.util.function.BiFunction;
 import misc1.commons.ds.ImmutableSalvagingMap;
+import misc1.commons.json.JsonSerializer;
+import misc1.commons.json.JsonSerializers;
 import misc1.commons.merge.Merge;
 import org.apache.commons.lang3.tuple.Triple;
 
@@ -77,5 +84,78 @@ public class StructType<S extends Struct<S, B>, B extends StructBuilder<S, B>> {
             S rhs2 = structCtor.apply(rhsB.build());
             return Triple.of(lhs2, mhs2, rhs2);
         };
+    }
+
+    Optional<JsonSerializer<B>> serializerBOptional() {
+        ImmutableMap.Builder<String, Function<B, JsonElement>> serStepsBuilder = ImmutableMap.builder();
+        ImmutableMap.Builder<String, BiFunction<B, JsonElement, B>> deserStepsBuilder = ImmutableMap.builder();
+        ImmutableList.Builder<String> broken = ImmutableList.builder();
+
+        class Helper {
+            private <VS, VB> void checkKey(StructKey<S, VS, VB> k) {
+                Optional<JsonSerializer<VB>> serializerOptional = k.serializer;
+                if(!serializerOptional.isPresent()) {
+                    broken.add(k.name);
+                    return;
+                }
+                JsonSerializer<VB> serializer = serializerOptional.get();
+                serStepsBuilder.put(k.name, (b) -> {
+                    VB vb = b.get(k);
+                    if(k.def.isPresent() && k.def.get().equals(vb)) {
+                        return null;
+                    }
+                    return serializer.toJson(vb);
+                });
+                deserStepsBuilder.put(k.name, (b, el) -> {
+                    return b.set(k, serializer.fromJson(el));
+                });
+            }
+        }
+        Helper h = new Helper();
+        for(StructKey<S, ?, ?> k : keys) {
+            h.checkKey(k);
+        }
+
+        if(!broken.build().isEmpty()) {
+            return Optional.absent();
+        }
+
+        ImmutableMap<String, Function<B, JsonElement>> serSteps = serStepsBuilder.build();
+        ImmutableMap<String, BiFunction<B, JsonElement, B>> deserSteps = deserStepsBuilder.build();
+        return Optional.of(new JsonSerializer<B>() {
+            @Override
+            public JsonElement toJson(B b) {
+                JsonObject r = new JsonObject();
+                for(Map.Entry<String, Function<B, JsonElement>> e : serSteps.entrySet()) {
+                    JsonElement el = e.getValue().apply(b);
+                    if(el != null) {
+                        r.add(e.getKey(), el);
+                    }
+                }
+                return r;
+            }
+
+            @Override
+            public B fromJson(JsonElement el) {
+                B b = builder();
+                for(Map.Entry<String, JsonElement> e : el.getAsJsonObject().entrySet()) {
+                    String name = e.getKey();
+                    BiFunction<B, JsonElement, B> deserStep = deserSteps.get(name);
+                    if(deserStep == null) {
+                        throw new IllegalArgumentException("Invalid key: " + name);
+                    }
+                    b = deserStep.apply(b, e.getValue());
+                }
+                return b;
+            }
+        });
+    }
+
+    public JsonSerializer<B> serializerB() {
+        return serializerBOptional().get();
+    }
+
+    public JsonSerializer<S> serializer() {
+        return JsonSerializers.wrapper(S::builder, serializerB(), B::build);
     }
 }
