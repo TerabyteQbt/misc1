@@ -1,0 +1,24 @@
+#!/bin/bash
+
+eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK}_HOME
+
+set -e
+
+if [ -d "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release ]; then
+    for dir in src test
+    do
+        "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d "$PACKAGE_DIR/$dir"
+    done
+fi
+
+GRADLE_HOME="$INPUT_ARTIFACTS_DIR/weak/misc1.java_build_process/weak/3p.gradle/strong/3p.gradle"
+JPB_HOME="$INPUT_ARTIFACTS_DIR/weak/misc1.java_build_process/strong/misc1.java_build_process"
+
+MYTMPDIR="$(mktemp -d -t qbt-jbp-XXXXXXXXXXXX)"
+trap 'rm -rf "$MYTMPDIR"' EXIT
+
+cp -R "$JPB_HOME/proj" "$MYTMPDIR/proj"
+
+cd "$MYTMPDIR/proj"
+
+"$GRADLE_HOME"/bin/gradle --stacktrace check simplePublish
