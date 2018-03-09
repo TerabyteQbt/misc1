@@ -1,9 +1,3 @@
 #!/bin/bash
 
-eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK}_HOME
-
-set -e
-
-if [ -d src ]; then "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d src; fi
-if [ -d test ]; then "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d test; fi
-"$INPUT_ARTIFACTS_DIR"/weak/3p.gradle/strong/3p.gradle/bin/gradle --stacktrace check simplePublish
+exec $INPUT_ARTIFACTS_DIR/weak/misc1.java_build_process/strong/misc1.java_build_process/bin/java-build-process

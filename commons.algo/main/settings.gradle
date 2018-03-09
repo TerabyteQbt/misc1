@@ -1,1 +1,0 @@
-rootProject.name = "$System.env.PACKAGE_NAME";
