@@ -21,4 +21,4 @@ cp -R "$JPB_HOME/proj" "$MYTMPDIR/proj"
 
 cd "$MYTMPDIR/proj"
 
-"$GRADLE_HOME"/bin/gradle --stacktrace check simplePublish
+"$GRADLE_HOME"/bin/gradle --no-daemon --stacktrace check simplePublish
