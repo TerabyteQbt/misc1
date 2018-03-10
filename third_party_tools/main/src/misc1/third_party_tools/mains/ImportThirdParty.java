@@ -46,6 +46,7 @@ import qbt.QbtHashUtils;
 import qbt.QbtTempDir;
 import qbt.QbtUtils;
 import qbt.config.QbtConfig;
+import qbt.manifest.PackageBuildType;
 import qbt.manifest.current.PackageManifest;
 import qbt.manifest.current.PackageMetadata;
 import qbt.manifest.current.QbtManifest;
@@ -172,8 +173,8 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                     continue;
                 }
                 ComparableVersion requestedCv = new ComparableVersion(module.version);
-                String packageName = getPackageFromModule(module);
-                String packagePath = getPackagePathFromModule(module);
+                String packageName = getPackageName(module);
+                String packagePath = getPackagePath(module);
                 Path newPackagePath = repoRoot.resolve(packagePath).normalize();
 
                 if(checkedDisk.add(packageName)) {
@@ -234,7 +235,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                     if(queued.add(depModule)) {
                         queue.add(depModule);
                     }
-                    depsBuilder.add(getPackageFromModule(depModule));
+                    depsBuilder.add(getPackageName(depModule));
                 }
                 Set<String> deps = depsBuilder.build();
 
@@ -266,7 +267,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             Queue<String> queue = Lists.newLinkedList();
             Set<String> queued = Sets.newHashSet();
             for(IvyModuleAndVersion module : modules) {
-                String packageName = getPackageFromModule(module);
+                String packageName = getPackageName(module);
                 if(queued.add(packageName)) {
                     queue.add(packageName);
                 }
@@ -291,7 +292,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         for(Map.Entry<String, IvyModuleAndVersion> install : installsBuilder.build().entrySet()) {
             String packageName = install.getKey();
             IvyModuleAndVersion module = install.getValue();
-            String packagePath = getPackagePathFromModule(module);
+            String packagePath = getPackagePath(module);
 
             Path repoDir = localRepoAccessor.dir;
             Path newPackagePath = repoDir.resolve(packagePath).normalize();
@@ -310,16 +311,17 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             QbtUtils.mkdirs(newPackagePath);
 
             // put in qbt-make
-            Path qbtMakePath = newPackagePath.resolve("qbt-make");
-            QbtUtils.writeLines(qbtMakePath, createQbtMakeContents(linkCheckerArgs.get(packageName)));
+            Path qbtMakePath = newPackagePath.resolve("lc/qbt-make");
+            QbtUtils.mkdirs(qbtMakePath.getParent());
+            QbtUtils.writeLines(qbtMakePath, createLcQbtMakeContents(packageName, linkCheckerArgs.get(packageName)));
             qbtMakePath.toFile().setExecutable(true);
 
             downloadIvyModule(ivyCache, module, newPackagePath);
 
             newManifest = newManifest.transform(destinationRepo, (rmb) -> {
                 return rmb.transform(RepoManifest.PACKAGES, (packages) -> {
-                    packages = packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module, packageName, false));
-                    packages = packages.with(packageName + ".lc", createPackageManifest(destinationRepo, dependencyEdges, module, packageName, true));
+                    packages = packages.with(packageName, createPackageManifest(destinationRepo, dependencyEdges, module));
+                    packages = packages.with(packageName + ".lc", createLcPackageManifest(destinationRepo, module));
                     return packages;
                 });
             });
@@ -336,27 +338,32 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         return 0;
     }
 
-    private PackageManifest.Builder createPackageManifest(RepoTip destinationRepo, Multimap<String, String> dependencyEdges, IvyModuleAndVersion module, String packageName, boolean isLinkCheck) {
-        String packagePath = getPackagePathFromModule(module);
+    private PackageManifest.Builder createPackageManifest(RepoTip destinationRepo, Multimap<String, String> dependencyEdges, IvyModuleAndVersion module) {
+        String packageName = getPackageName(module);
         LOGGER.debug("Building package manifest for module " + module + " (" + packageName + ")");
         PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
         pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.ARCH_INDEPENDENT, true));
-        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.PREFIX, packagePath));
-        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.QBT_ENV, ImmutableMap.of("JDK", Maybe.of("1_8"))));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.PREFIX, getPackagePath(module) + "/src"));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.BUILD_TYPE, PackageBuildType.COPY));
 
         // add deps
         for(String dep : dependencyEdges.get(packageName)) {
             LOGGER.debug("Package " + packageName + " depends upon " + dep);
             pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with(dep, Pair.of(NormalDependencyType.STRONG, destinationRepo.tip)));
         }
-        if(isLinkCheck) {
-            // add link checker by default - our default script uses it
-            pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
-        }
-        else {
-            pmb = pmb.transform(PackageManifest.VERIFY_DEPS, (verifyDeps) -> verifyDeps.with(Pair.of(PackageTip.TYPE.of(packageName + ".lc", destinationRepo.tip), "link_check"), ObjectUtils.NULL));
-        }
+        pmb = pmb.transform(PackageManifest.VERIFY_DEPS, (verifyDeps) -> verifyDeps.with(Pair.of(PackageTip.TYPE.of(packageName + ".lc", destinationRepo.tip), "link_check"), ObjectUtils.NULL));
 
+        return pmb;
+    }
+
+    private PackageManifest.Builder createLcPackageManifest(RepoTip destinationRepo, IvyModuleAndVersion module) {
+        String packageName = getPackageName(module);
+        PackageManifest.Builder pmb = PackageManifest.TYPE.builder();
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.ARCH_INDEPENDENT, true));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.PREFIX, getPackagePath(module) + "/lc"));
+        pmb = pmb.transform(PackageManifest.METADATA, (metadata) -> metadata.set(PackageMetadata.QBT_ENV, ImmutableMap.of("JDK", Maybe.of("1_8"))));
+        pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with(packageName, Pair.of(NormalDependencyType.BUILDTIME_WEAK, destinationRepo.tip)));
+        pmb = pmb.transform(PackageManifest.NORMAL_DEPS, (normalDeps) -> normalDeps.with("qbt_fringe.link_checker.release", Pair.of(NormalDependencyType.BUILDTIME_WEAK, "HEAD")));
         return pmb;
     }
 
@@ -406,14 +413,14 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         }
     }
 
-    private static String getPackageFromModule(IvyModuleAndVersion module) {
+    private static String getPackageName(IvyModuleAndVersion module) {
         return ("mc." + module.group + "." + module.module).replaceAll("-", ".");
     }
-    private static String getPackagePathFromModule(IvyModuleAndVersion module) {
+    private static String getPackagePath(IvyModuleAndVersion module) {
         return "mc" + File.separator + module.group + File.separator + module.module;
     }
 
-    private static ImmutableList<String> createQbtMakeContents(ImmutableList<String> linkCheckerArgs) {
+    private static ImmutableList<String> createLcQbtMakeContents(String packageName, ImmutableList<String> linkCheckerArgs) {
         ImmutableList.Builder<String> b = ImmutableList.builder();
         b.add("#!/bin/bash");
         b.add("");
@@ -422,11 +429,8 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         b.add("eval export JAVA_HOME=\\$JAVA_${QBT_ENV_JDK}_HOME");
         b.add("");
         b.add("set -e");
-        b.add("cp -R $PACKAGE_DIR/src/* $OUTPUT_ARTIFACTS_DIR/");
-        b.add("if [ -d $INPUT_ARTIFACTS_DIR/weak/qbt_fringe.link_checker.release ]");
-        b.add("then");
-        b.add("    $INPUT_ARTIFACTS_DIR/weak/qbt_fringe.link_checker.release/strong/qbt_fringe.link_checker.release/bin/link_checker --qbtDefaults " + Joiner.on(' ').join(linkCheckerArgs));
-        b.add("fi");
+        b.add("");
+        b.add("$INPUT_ARTIFACTS_DIR/weak/qbt_fringe.link_checker.release/strong/qbt_fringe.link_checker.release/bin/link_checker --qbtDefaults " + packageName + " " + Joiner.on(' ').join(linkCheckerArgs));
         return b.build();
     }
 }
