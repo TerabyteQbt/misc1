@@ -322,6 +322,12 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         QbtManifest.Builder newManifest = manifest.builder();
         newManifest = newManifest.transform(destinationRepo, (rmb) -> {
             return rmb.transform(RepoManifest.PACKAGES, (packages) -> {
+                for(String packageName : packages.map.keys()) {
+                    if(packageName.startsWith("mc.")) {
+                        packages = packages.without(packageName);
+                    }
+                }
+
                 for(IvyModuleAndVersion module : installs) {
                     String packageName = getPackageName(module);
                     String packagePath = getPackagePath(module);
