@@ -29,7 +29,6 @@ import misc1.commons.options.OptionsLibrary;
 import misc1.commons.options.OptionsResults;
 import misc1.third_party_tools.ivy.IvyCache;
 import misc1.third_party_tools.ivy.IvyModuleAndVersion;
-import misc1.third_party_tools.ivy.PatternIvyModuleAndVersion;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
@@ -105,9 +104,9 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
         Path configFile = repoRoot.resolve("mc/config");
         ImmutableList.Builder<IvyModuleAndVersion> modulesBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Pair<PatternIvyModuleAndVersion, IvyModuleAndVersion>> addDependencyBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Pair<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion>> removeDependencyBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Triple<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependencyBuilder = ImmutableList.builder();
+        ImmutableList.Builder<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> addDependencyBuilder = ImmutableList.builder();
+        ImmutableList.Builder<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> removeDependencyBuilder = ImmutableList.builder();
+        ImmutableList.Builder<Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependencyBuilder = ImmutableList.builder();
         ImmutableListMultimap.Builder<String, String> linkCheckerArgsBuilder = ImmutableListMultimap.builder();
         Pattern modulePattern = Pattern.compile("^MODULE:(.*)$");
         Pattern addPattern = Pattern.compile("^ADD:(.*),(.*)$");
@@ -129,17 +128,17 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             }
             Matcher addMatcher = addPattern.matcher(configLine);
             if(addMatcher.matches()) {
-                addDependencyBuilder.add(Pair.of(new PatternIvyModuleAndVersion(addMatcher.group(1)), new IvyModuleAndVersion(addMatcher.group(2))));
+                addDependencyBuilder.add(Pair.of(new IvyModuleAndVersion(addMatcher.group(1)), new IvyModuleAndVersion(addMatcher.group(2))));
                 continue;
             }
             Matcher removeMatcher = removePattern.matcher(configLine);
             if(removeMatcher.matches()) {
-                removeDependencyBuilder.add(Pair.of(new PatternIvyModuleAndVersion(removeMatcher.group(1)), new PatternIvyModuleAndVersion(removeMatcher.group(2))));
+                removeDependencyBuilder.add(Pair.of(new IvyModuleAndVersion(removeMatcher.group(1)), new IvyModuleAndVersion(removeMatcher.group(2))));
                 continue;
             }
             Matcher rewriteMatcher = rewritePattern.matcher(configLine);
             if(rewriteMatcher.matches()) {
-                rewriteDependencyBuilder.add(Triple.of(new PatternIvyModuleAndVersion(rewriteMatcher.group(1)), new PatternIvyModuleAndVersion(rewriteMatcher.group(2)), new IvyModuleAndVersion(rewriteMatcher.group(3))));
+                rewriteDependencyBuilder.add(Triple.of(new IvyModuleAndVersion(rewriteMatcher.group(1)), new IvyModuleAndVersion(rewriteMatcher.group(2)), new IvyModuleAndVersion(rewriteMatcher.group(3))));
                 continue;
             }
             Matcher linkCheckerArgsMatcher = linkCheckerArgsPattern.matcher(configLine);
@@ -152,9 +151,9 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         }
 
         ImmutableList<IvyModuleAndVersion> modules = modulesBuilder.build();
-        ImmutableList<Pair<PatternIvyModuleAndVersion, IvyModuleAndVersion>> addDependency = addDependencyBuilder.build();
-        ImmutableList<Pair<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion>> removeDependency = removeDependencyBuilder.build();
-        ImmutableList<Triple<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependency = rewriteDependencyBuilder.build();
+        ImmutableList<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> addDependency = addDependencyBuilder.build();
+        ImmutableList<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> removeDependency = removeDependencyBuilder.build();
+        ImmutableList<Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependency = rewriteDependencyBuilder.build();
         ImmutableListMultimap<String, String> linkCheckerArgs = linkCheckerArgsBuilder.build();
 
         LOGGER.info("Calculating Maximal Versions");
@@ -198,8 +197,8 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                 for(IvyModuleAndVersion depModule : ivyCache.queryIvy(module).getDependencies()) {
                     LOGGER.debug("Unmunged dependency: " + module + " -> " + depModule);
                     boolean remove = false;
-                    for(Pair<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion> removeEntry : removeDependency) {
-                        if(removeEntry.getLeft().matches(module) && removeEntry.getRight().matches(depModule)) {
+                    for(Pair<IvyModuleAndVersion, IvyModuleAndVersion> removeEntry : removeDependency) {
+                        if(removeEntry.getLeft().contains(module) && removeEntry.getRight().contains(depModule)) {
                             remove = true;
                             break;
                         }
@@ -209,8 +208,8 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                     }
 
                     IvyModuleAndVersion rewritten = null;
-                    for(Triple<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion, IvyModuleAndVersion> rewriteEntry : rewriteDependency) {
-                        if(rewriteEntry.getLeft().matches(module) && rewriteEntry.getMiddle().matches(depModule)) {
+                    for(Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion> rewriteEntry : rewriteDependency) {
+                        if(rewriteEntry.getLeft().contains(module) && rewriteEntry.getMiddle().contains(depModule)) {
                             rewritten = rewriteEntry.getRight();
                             break;
                         }
@@ -222,8 +221,8 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
                     mungedDependencies.add(depModule);
                 }
-                for(Pair<PatternIvyModuleAndVersion, IvyModuleAndVersion> addEntry : addDependency) {
-                    if(addEntry.getLeft().matches(module)) {
+                for(Pair<IvyModuleAndVersion, IvyModuleAndVersion> addEntry : addDependency) {
+                    if(addEntry.getLeft().contains(module)) {
                         mungedDependencies.add(addEntry.getRight());
                     }
                 }
