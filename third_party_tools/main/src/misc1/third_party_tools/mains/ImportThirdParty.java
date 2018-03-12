@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import misc1.commons.ExceptionUtils;
 import misc1.commons.Maybe;
 import misc1.commons.options.OptionsFragment;
 import misc1.commons.options.OptionsLibrary;
@@ -319,32 +320,32 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
         LOGGER.info("Fetching packages");
         QbtManifest.Builder newManifest = manifest.builder();
-        for(IvyModuleAndVersion module : installs) {
-            String packageName = getPackageName(module);
-            String packagePath = getPackagePath(module);
+        newManifest = newManifest.transform(destinationRepo, (rmb) -> {
+            return rmb.transform(RepoManifest.PACKAGES, (packages) -> {
+                for(IvyModuleAndVersion module : installs) {
+                    String packageName = getPackageName(module);
+                    String packagePath = getPackagePath(module);
 
-            Path newPackagePath = repoDir.resolve(packagePath).normalize();
-            LOGGER.debug("Fetching package " + packageName + " into " + newPackagePath + " using module string " + module);
+                    Path newPackagePath = repoDir.resolve(packagePath).normalize();
+                    LOGGER.debug("Fetching package " + packageName + " into " + newPackagePath + " using module string " + module);
 
-            // Create the package
-            QbtUtils.mkdirs(newPackagePath);
+                    // Create the package
+                    QbtUtils.mkdirs(newPackagePath);
 
-            // put in qbt-make
-            Path qbtMakePath = newPackagePath.resolve("lc/qbt-make");
-            QbtUtils.mkdirs(qbtMakePath.getParent());
-            QbtUtils.writeLines(qbtMakePath, createLcQbtMakeContents(packageName, linkCheckerArgs.get(packageName)));
-            qbtMakePath.toFile().setExecutable(true);
+                    // put in qbt-make
+                    Path qbtMakePath = newPackagePath.resolve("lc/qbt-make");
+                    QbtUtils.mkdirs(qbtMakePath.getParent());
+                    QbtUtils.writeLines(qbtMakePath, createLcQbtMakeContents(packageName, linkCheckerArgs.get(packageName)));
+                    qbtMakePath.toFile().setExecutable(true);
 
-            downloadIvyModule(ivyCache, module, newPackagePath);
+                    downloadIvyModule(ivyCache, module, newPackagePath);
 
-            newManifest = newManifest.transform(destinationRepo, (rmb) -> {
-                return rmb.transform(RepoManifest.PACKAGES, (packages) -> {
                     packages = packages.with(packageName, createPackageManifest(destinationRepo, directDependencies.get(module), module));
                     packages = packages.with(packageName + ".lc", createLcPackageManifest(destinationRepo, module));
-                    return packages;
-                });
+                }
+                return packages;
             });
-        }
+        });
 
         // Update the manifest
         manifestResult.deparse(config.manifestParser, newManifest.build());
@@ -406,7 +407,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         return lines.build();
     }
 
-    public static void downloadIvyModule(IvyCache ivyCache, IvyModuleAndVersion module, Path destinationPath) throws Exception {
+    public static void downloadIvyModule(IvyCache ivyCache, IvyModuleAndVersion module, Path destinationPath) {
         try(QbtTempDir tempDir = new QbtTempDir()) {
             ImmutableList<Pair<Path, Path>> filePairs = ivyCache.queryIvy(module).getFiles();
             for(Pair<Path, Path> filePair : filePairs) {
@@ -425,6 +426,9 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
             // put in metadata
             QbtUtils.writeLines(destinationPath.resolve("maven-module.info"), getMetadata(module, destinationPath));
+        }
+        catch(Exception e) {
+            throw ExceptionUtils.commute(e);
         }
     }
 
