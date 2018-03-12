@@ -65,6 +65,10 @@ public final class IvyModuleAndVersion extends Struct<IvyModuleAndVersion, IvyMo
         return false;
     }
 
+    public IvyModule withoutVersion() {
+        return IvyModule.of(group, module);
+    }
+
     public static class Builder extends StructBuilder<IvyModuleAndVersion, Builder> {
         public Builder(ImmutableSalvagingMap<StructKey<IvyModuleAndVersion, ?, ?>, Object> map) {
             super(TYPE, map);

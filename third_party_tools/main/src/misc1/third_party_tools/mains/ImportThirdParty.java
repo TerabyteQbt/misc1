@@ -28,6 +28,7 @@ import misc1.commons.options.OptionsFragment;
 import misc1.commons.options.OptionsLibrary;
 import misc1.commons.options.OptionsResults;
 import misc1.third_party_tools.ivy.IvyCache;
+import misc1.third_party_tools.ivy.IvyModule;
 import misc1.third_party_tools.ivy.IvyModuleAndVersion;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -220,25 +221,25 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         }
 
         // Step 2a: flatten module+group+version direct deps into group+module direct deps
-        ImmutableMultimap<Pair<String, String>, Pair<String, String>> directVersionlessDependencies;
+        ImmutableMultimap<IvyModule, IvyModule> directVersionlessDependencies;
         {
-            ImmutableMultimap.Builder<Pair<String, String>, Pair<String, String>> directVersionlessDependenciesBuilder = ImmutableMultimap.builder();
+            ImmutableMultimap.Builder<IvyModule, IvyModule> directVersionlessDependenciesBuilder = ImmutableMultimap.builder();
             for(Map.Entry<IvyModuleAndVersion, IvyModuleAndVersion> e : directDependencies.entries()) {
                 IvyModuleAndVersion from = e.getKey();
                 IvyModuleAndVersion to = e.getValue();
-                directVersionlessDependenciesBuilder.put(Pair.of(from.group, from.module), Pair.of(to.group, to.module));
+                directVersionlessDependenciesBuilder.put(from.withoutVersion(), to.withoutVersion());
             }
             directVersionlessDependencies = directVersionlessDependenciesBuilder.build();
         }
 
         // Step 2b: compute topo order of group+module pairs to process
-        ImmutableList<Pair<String, String>> order;
+        ImmutableList<IvyModule> order;
         {
-            ImmutableList.Builder<Pair<String, String>> orderBuilder = ImmutableList.builder();
-            Set<Pair<String, String>> built = Sets.newHashSet();
-            Set<Pair<String, String>> building = Sets.newHashSet();
+            ImmutableList.Builder<IvyModule> orderBuilder = ImmutableList.builder();
+            Set<IvyModule> built = Sets.newHashSet();
+            Set<IvyModule> building = Sets.newHashSet();
             class Helper {
-                void build(Pair<String, String> module) {
+                void build(IvyModule module) {
                     if(built.contains(module)) {
                         return;
                     }
@@ -246,7 +247,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                         throw new IllegalStateException("Cycle in group+module dependency graph at " + module + "!");
                     }
                     // build children first
-                    for(Pair<String, String> module2 : directVersionlessDependencies.get(module)) {
+                    for(IvyModule module2 : directVersionlessDependencies.get(module)) {
                         build(module2);
                     }
                     // and ourselves only after all our children
@@ -257,7 +258,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             }
             Helper h = new Helper();
             for(IvyModuleAndVersion module : modules) {
-                h.build(Pair.of(module.group, module.module));
+                h.build(module.withoutVersion());
             }
             // the twist: we have to process in reverse (top down)
             order = orderBuilder.build().reverse();
@@ -267,14 +268,14 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         ImmutableList<IvyModuleAndVersion> installs;
         {
             ImmutableList.Builder<IvyModuleAndVersion> installsBuilder = ImmutableList.builder();
-            Map<Pair<String, String>, String> tempVersions = Maps.newHashMap();
+            Map<IvyModule, String> tempVersions = Maps.newHashMap();
             class Helper {
                 void upgrade(String from, IvyModuleAndVersion module) {
                     if(module.version.equals("0")) {
                         // nope, someone else had better specify a version
                         return;
                     }
-                    Pair<String, String> key = Pair.of(module.group, module.module);
+                    IvyModule key = module.withoutVersion();
                     String already = tempVersions.get(key);
                     final String desc;
                     if(already == null) {
@@ -295,7 +296,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             for(IvyModuleAndVersion module : modules) {
                 h.upgrade("(requested)", module);
             }
-            for(Pair<String, String> module : order) {
+            for(IvyModule module : order) {
                 String version = tempVersions.get(module);
                 if(version == null) {
                     // module had been used at some point but upgrades pruned
@@ -303,7 +304,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                     LOGGER.debug("Computing installs: dumped: " + module);
                     continue;
                 }
-                IvyModuleAndVersion install = IvyModuleAndVersion.of(module.getLeft(), module.getRight(), version);
+                IvyModuleAndVersion install = module.withVersion(version);
                 LOGGER.debug("Computing installs: accepted: " + install);
                 installsBuilder.add(install);
                 for(IvyModuleAndVersion dep : directDependencies.get(install)) {
