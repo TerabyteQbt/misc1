@@ -55,7 +55,6 @@ import qbt.options.ManifestOptionsResult;
 import qbt.repo.LocalRepoAccessor;
 import qbt.tip.PackageTip;
 import qbt.tip.RepoTip;
-import qbt.vcs.Repository;
 
 public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
@@ -99,7 +98,6 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
             throw new IllegalArgumentException("You must have a local override of repo " + destinationRepo);
         }
         Path repoRoot = localRepoAccessor.dir.normalize();
-        Repository vcsRepo = localRepoAccessor.vcs.getRepository(repoRoot);
         IvyCache ivyCache = new IvyCache(repoRoot.resolve("mc/cache"));
 
         Path configFile = repoRoot.resolve("mc/config");
