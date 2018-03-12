@@ -100,59 +100,65 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         Path repoRoot = localRepoAccessor.dir.normalize();
         IvyCache ivyCache = new IvyCache(repoRoot.resolve("mc/cache"));
 
-        Path configFile = repoRoot.resolve("mc/config");
-        ImmutableList.Builder<IvyModuleAndVersion> modulesBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> addDependencyBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> removeDependencyBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependencyBuilder = ImmutableList.builder();
-        ImmutableListMultimap.Builder<String, String> linkCheckerArgsBuilder = ImmutableListMultimap.builder();
-        Pattern modulePattern = Pattern.compile("^MODULE:(.*)$");
-        Pattern addPattern = Pattern.compile("^ADD:(.*),(.*)$");
-        Pattern removePattern = Pattern.compile("^REMOVE:(.*),(.*)$");
-        Pattern rewritePattern = Pattern.compile("^REWRITE:(.*),(.*),(.*)$");
-        Pattern linkCheckerArgsPattern = Pattern.compile("^LINK_CHECKER_ARGS:(.*),(.*)$");
-        for(String configLine : QbtUtils.readLines(configFile)) {
-            if(configLine.isEmpty()) {
-                continue;
-            }
-            if(configLine.startsWith("#")) {
-                continue;
-            }
+        // Step 0: read config
+        ImmutableList<IvyModuleAndVersion> modules;
+        ImmutableList<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> addDependency;
+        ImmutableList<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> removeDependency;
+        ImmutableList<Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependency;
+        ImmutableListMultimap<String, String> linkCheckerArgs;
+        {
+            ImmutableList.Builder<IvyModuleAndVersion> modulesBuilder = ImmutableList.builder();
+            ImmutableList.Builder<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> addDependencyBuilder = ImmutableList.builder();
+            ImmutableList.Builder<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> removeDependencyBuilder = ImmutableList.builder();
+            ImmutableList.Builder<Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependencyBuilder = ImmutableList.builder();
+            ImmutableListMultimap.Builder<String, String> linkCheckerArgsBuilder = ImmutableListMultimap.builder();
+            Pattern modulePattern = Pattern.compile("^MODULE:(.*)$");
+            Pattern addPattern = Pattern.compile("^ADD:(.*),(.*)$");
+            Pattern removePattern = Pattern.compile("^REMOVE:(.*),(.*)$");
+            Pattern rewritePattern = Pattern.compile("^REWRITE:(.*),(.*),(.*)$");
+            Pattern linkCheckerArgsPattern = Pattern.compile("^LINK_CHECKER_ARGS:(.*),(.*)$");
+            for(String configLine : QbtUtils.readLines(repoRoot.resolve("mc/config"))) {
+                if(configLine.isEmpty()) {
+                    continue;
+                }
+                if(configLine.startsWith("#")) {
+                    continue;
+                }
 
-            Matcher moduleMatcher = modulePattern.matcher(configLine);
-            if(moduleMatcher.matches()) {
-                modulesBuilder.add(IvyModuleAndVersion.parse(moduleMatcher.group(1)));
-                continue;
-            }
-            Matcher addMatcher = addPattern.matcher(configLine);
-            if(addMatcher.matches()) {
-                addDependencyBuilder.add(Pair.of(IvyModuleAndVersion.parse(addMatcher.group(1)), IvyModuleAndVersion.parse(addMatcher.group(2))));
-                continue;
-            }
-            Matcher removeMatcher = removePattern.matcher(configLine);
-            if(removeMatcher.matches()) {
-                removeDependencyBuilder.add(Pair.of(IvyModuleAndVersion.parse(removeMatcher.group(1)), IvyModuleAndVersion.parse(removeMatcher.group(2))));
-                continue;
-            }
-            Matcher rewriteMatcher = rewritePattern.matcher(configLine);
-            if(rewriteMatcher.matches()) {
-                rewriteDependencyBuilder.add(Triple.of(IvyModuleAndVersion.parse(rewriteMatcher.group(1)), IvyModuleAndVersion.parse(rewriteMatcher.group(2)), IvyModuleAndVersion.parse(rewriteMatcher.group(3))));
-                continue;
-            }
-            Matcher linkCheckerArgsMatcher = linkCheckerArgsPattern.matcher(configLine);
-            if(linkCheckerArgsMatcher.matches()) {
-                linkCheckerArgsBuilder.put(linkCheckerArgsMatcher.group(1), linkCheckerArgsMatcher.group(2));
-                continue;
-            }
+                Matcher moduleMatcher = modulePattern.matcher(configLine);
+                if(moduleMatcher.matches()) {
+                    modulesBuilder.add(IvyModuleAndVersion.parse(moduleMatcher.group(1)));
+                    continue;
+                }
+                Matcher addMatcher = addPattern.matcher(configLine);
+                if(addMatcher.matches()) {
+                    addDependencyBuilder.add(Pair.of(IvyModuleAndVersion.parse(addMatcher.group(1)), IvyModuleAndVersion.parse(addMatcher.group(2))));
+                    continue;
+                }
+                Matcher removeMatcher = removePattern.matcher(configLine);
+                if(removeMatcher.matches()) {
+                    removeDependencyBuilder.add(Pair.of(IvyModuleAndVersion.parse(removeMatcher.group(1)), IvyModuleAndVersion.parse(removeMatcher.group(2))));
+                    continue;
+                }
+                Matcher rewriteMatcher = rewritePattern.matcher(configLine);
+                if(rewriteMatcher.matches()) {
+                    rewriteDependencyBuilder.add(Triple.of(IvyModuleAndVersion.parse(rewriteMatcher.group(1)), IvyModuleAndVersion.parse(rewriteMatcher.group(2)), IvyModuleAndVersion.parse(rewriteMatcher.group(3))));
+                    continue;
+                }
+                Matcher linkCheckerArgsMatcher = linkCheckerArgsPattern.matcher(configLine);
+                if(linkCheckerArgsMatcher.matches()) {
+                    linkCheckerArgsBuilder.put(linkCheckerArgsMatcher.group(1), linkCheckerArgsMatcher.group(2));
+                    continue;
+                }
 
-            throw new IllegalArgumentException("Bad config line: " + configLine);
+                throw new IllegalArgumentException("Bad config line: " + configLine);
+            }
+            modules = modulesBuilder.build();
+            addDependency = addDependencyBuilder.build();
+            removeDependency = removeDependencyBuilder.build();
+            rewriteDependency = rewriteDependencyBuilder.build();
+            linkCheckerArgs = linkCheckerArgsBuilder.build();
         }
-
-        ImmutableList<IvyModuleAndVersion> modules = modulesBuilder.build();
-        ImmutableList<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> addDependency = addDependencyBuilder.build();
-        ImmutableList<Pair<IvyModuleAndVersion, IvyModuleAndVersion>> removeDependency = removeDependencyBuilder.build();
-        ImmutableList<Triple<IvyModuleAndVersion, IvyModuleAndVersion, IvyModuleAndVersion>> rewriteDependency = rewriteDependencyBuilder.build();
-        ImmutableListMultimap<String, String> linkCheckerArgs = linkCheckerArgsBuilder.build();
 
         // Step 1: compute multimap of direct dependencies, as rewritten by
         // horrifying configuration.
