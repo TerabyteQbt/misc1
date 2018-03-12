@@ -11,7 +11,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashCode;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -102,9 +101,9 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         }
         Path repoRoot = localRepoAccessor.dir.normalize();
         Repository vcsRepo = localRepoAccessor.vcs.getRepository(repoRoot);
-        IvyCache ivyCache = new IvyCache(repoRoot.resolve("mc/.cache"));
+        IvyCache ivyCache = new IvyCache(repoRoot.resolve("mc/cache"));
 
-        Path configFile = repoRoot.resolve("mc/.config");
+        Path configFile = repoRoot.resolve("mc/config");
         ImmutableList.Builder<IvyModuleAndVersion> modulesBuilder = ImmutableList.builder();
         ImmutableList.Builder<Pair<PatternIvyModuleAndVersion, IvyModuleAndVersion>> addDependencyBuilder = ImmutableList.builder();
         ImmutableList.Builder<Pair<PatternIvyModuleAndVersion, PatternIvyModuleAndVersion>> removeDependencyBuilder = ImmutableList.builder();
@@ -417,7 +416,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
         return ("mc." + module.group + "." + module.module).replaceAll("-", ".");
     }
     private static String getPackagePath(IvyModuleAndVersion module) {
-        return "mc" + File.separator + module.group + File.separator + module.module;
+        return "mc/packages/" + module.group + "/" + module.module;
     }
 
     private static ImmutableList<String> createLcQbtMakeContents(String packageName, ImmutableList<String> linkCheckerArgs) {
