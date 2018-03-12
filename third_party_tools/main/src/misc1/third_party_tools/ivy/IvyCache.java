@@ -59,7 +59,7 @@ public class IvyCache {
             }
         });
 
-        ImmutableList<IvyModuleAndVersion> deps = ImmutableList.copyOf(Iterables.transform(QbtUtils.readLines(moduleDir.resolve("dependencies")), IvyModuleAndVersion::new));
+        ImmutableList<IvyModuleAndVersion> deps = ImmutableList.copyOf(Iterables.transform(QbtUtils.readLines(moduleDir.resolve("dependencies")), IvyModuleAndVersion::parse));
 
         final ImmutableList.Builder<Pair<Path, Path>> filesBuilder = ImmutableList.builder();
 
@@ -146,7 +146,7 @@ public class IvyCache {
                     continue;
                 }
                 ModuleRevisionId mrid = depD.getDependencyRevisionId();
-                dependencyModuleStrings.add(new IvyModuleAndVersion(mrid.getOrganisation(), mrid.getName(), mrid.getRevision()));
+                dependencyModuleStrings.add(IvyModuleAndVersion.of(mrid.getOrganisation(), mrid.getName(), mrid.getRevision()));
             }
             // now retrieve
             // ignore classifier because (e.g. sources) should have the same name

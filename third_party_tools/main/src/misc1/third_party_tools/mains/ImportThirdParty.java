@@ -123,22 +123,22 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
 
             Matcher moduleMatcher = modulePattern.matcher(configLine);
             if(moduleMatcher.matches()) {
-                modulesBuilder.add(new IvyModuleAndVersion(moduleMatcher.group(1)));
+                modulesBuilder.add(IvyModuleAndVersion.parse(moduleMatcher.group(1)));
                 continue;
             }
             Matcher addMatcher = addPattern.matcher(configLine);
             if(addMatcher.matches()) {
-                addDependencyBuilder.add(Pair.of(new IvyModuleAndVersion(addMatcher.group(1)), new IvyModuleAndVersion(addMatcher.group(2))));
+                addDependencyBuilder.add(Pair.of(IvyModuleAndVersion.parse(addMatcher.group(1)), IvyModuleAndVersion.parse(addMatcher.group(2))));
                 continue;
             }
             Matcher removeMatcher = removePattern.matcher(configLine);
             if(removeMatcher.matches()) {
-                removeDependencyBuilder.add(Pair.of(new IvyModuleAndVersion(removeMatcher.group(1)), new IvyModuleAndVersion(removeMatcher.group(2))));
+                removeDependencyBuilder.add(Pair.of(IvyModuleAndVersion.parse(removeMatcher.group(1)), IvyModuleAndVersion.parse(removeMatcher.group(2))));
                 continue;
             }
             Matcher rewriteMatcher = rewritePattern.matcher(configLine);
             if(rewriteMatcher.matches()) {
-                rewriteDependencyBuilder.add(Triple.of(new IvyModuleAndVersion(rewriteMatcher.group(1)), new IvyModuleAndVersion(rewriteMatcher.group(2)), new IvyModuleAndVersion(rewriteMatcher.group(3))));
+                rewriteDependencyBuilder.add(Triple.of(IvyModuleAndVersion.parse(rewriteMatcher.group(1)), IvyModuleAndVersion.parse(rewriteMatcher.group(2)), IvyModuleAndVersion.parse(rewriteMatcher.group(3))));
                 continue;
             }
             Matcher linkCheckerArgsMatcher = linkCheckerArgsPattern.matcher(configLine);
@@ -184,7 +184,7 @@ public class ImportThirdParty extends QbtCommand<ImportThirdParty.Options> {
                         if(!Files.exists(metadataPath)) {
                             throw new IllegalStateException("Package " + packageName + " is already in the manifest but has no maven-module.info file");
                         }
-                        IvyModuleAndVersion oldModule = new IvyModuleAndVersion(QbtUtils.readLines(metadataPath).get(0).replaceFirst("Maven Module Version ",  ""));
+                        IvyModuleAndVersion oldModule = IvyModuleAndVersion.parse(QbtUtils.readLines(metadataPath).get(0).replaceFirst("Maven Module Version ",  ""));
                         LOGGER.debug("Found module \"" + oldModule + "\" on disk");
                         if(queued.add(oldModule)) {
                             queue.add(oldModule);

@@ -40,7 +40,7 @@ public final class ImportThirdPartyTest {
     @Test
     public void testDownloadIvyModule() throws Exception {
         try(QbtTempDir tempDir = new QbtTempDir()) {
-            IvyResult ivyResult = new IvyCache(tempDir.path).queryIvy(new IvyModuleAndVersion("junit:junit:4.12"));
+            IvyResult ivyResult = new IvyCache(tempDir.path).queryIvy(IvyModuleAndVersion.parse("junit:junit:4.12"));
             Assert.assertEquals(1, ivyResult.getFiles().size());
         }
     }
@@ -49,7 +49,7 @@ public final class ImportThirdPartyTest {
     @Test
     public void testGetIvyDependencies() throws IOException, ParseException {
         try(QbtTempDir tempDir = new QbtTempDir()) {
-            ImmutableList<IvyModuleAndVersion> dependencies = new IvyCache(tempDir.path).queryIvy(new IvyModuleAndVersion("junit:junit:4.12")).getDependencies();
+            ImmutableList<IvyModuleAndVersion> dependencies = new IvyCache(tempDir.path).queryIvy(IvyModuleAndVersion.parse("junit:junit:4.12")).getDependencies();
             Assert.assertEquals(1, dependencies.size());
             Assert.assertEquals("org.hamcrest:hamcrest-core:1.3", dependencies.get(0).toString());
         }

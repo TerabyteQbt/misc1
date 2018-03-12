@@ -1,59 +1,40 @@
 package misc1.third_party_tools.ivy;
 
-import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableMap;
+import misc1.commons.ds.ImmutableSalvagingMap;
+import misc1.commons.ds.Struct;
+import misc1.commons.ds.StructBuilder;
+import misc1.commons.ds.StructKey;
+import misc1.commons.ds.StructType;
+import misc1.commons.ds.StructTypeBuilder;
 
-public final class IvyModuleAndVersion {
+public final class IvyModuleAndVersion extends Struct<IvyModuleAndVersion, IvyModuleAndVersion.Builder> {
     public final String group;
     public final String module;
     public final String version;
 
-    public IvyModuleAndVersion(String arg) {
-        this(checkedSplit(arg));
-    }
-
-    // getting around dumb-ass java insistence that this() be first statement in ctor
-    private static String[] checkedSplit(String arg) {
+    public static IvyModuleAndVersion parse(String arg) {
         String[] parts = arg.split(":");
         if(parts.length != 3) {
             throw new IllegalArgumentException("Module must have exactly three parts: " + arg);
         }
-        return parts;
+        return of(parts[0], parts[1], parts[2]);
     }
 
-    private IvyModuleAndVersion(String[] parts) {
-        this(parts[0], parts[1], parts[2]);
+    public static IvyModuleAndVersion of(String group, String module, String version) {
+        Builder b = TYPE.builder();
+        b = b.set(GROUP, group);
+        b = b.set(MODULE, module);
+        b = b.set(VERSION, version);
+        return b.build();
     }
 
-    public IvyModuleAndVersion(String group, String module, String version) {
-        this.group = group;
-        this.module = module;
-        this.version = version;
-    }
+    private IvyModuleAndVersion(ImmutableMap<StructKey<IvyModuleAndVersion, ?, ?>, Object> map) {
+        super(TYPE, map);
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(group, module, version);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if(!(obj instanceof IvyModuleAndVersion)) {
-            return false;
-        }
-        if(obj.getClass() != this.getClass()) {
-            return false;
-        }
-        IvyModuleAndVersion other = (IvyModuleAndVersion)obj;
-        if(!group.equals(other.group)) {
-            return false;
-        }
-        if(!module.equals(other.module)) {
-            return false;
-        }
-        if(!version.equals(other.version)) {
-            return false;
-        }
-        return true;
+        this.group = get(GROUP);
+        this.module = get(MODULE);
+        this.version = get(VERSION);
     }
 
     @Override
@@ -82,5 +63,25 @@ public final class IvyModuleAndVersion {
             return true;
         }
         return false;
+    }
+
+    public static class Builder extends StructBuilder<IvyModuleAndVersion, Builder> {
+        public Builder(ImmutableSalvagingMap<StructKey<IvyModuleAndVersion, ?, ?>, Object> map) {
+            super(TYPE, map);
+        }
+    }
+
+    public static final StructKey<IvyModuleAndVersion, String, String> GROUP;
+    public static final StructKey<IvyModuleAndVersion, String, String> MODULE;
+    public static final StructKey<IvyModuleAndVersion, String, String> VERSION;
+    public static final StructType<IvyModuleAndVersion, Builder> TYPE;
+    static {
+        StructTypeBuilder<IvyModuleAndVersion, Builder> b = new StructTypeBuilder<>(IvyModuleAndVersion::new, Builder::new);
+
+        GROUP = b.<String>key("group").add();
+        MODULE = b.<String>key("module").add();
+        VERSION = b.<String>key("version").add();
+
+        TYPE = b.build();
     }
 }
