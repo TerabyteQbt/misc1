@@ -1,6 +1,6 @@
 package misc1.commons.concurrent.asyncupdater;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -85,7 +85,7 @@ class MultiThreadedAsyncUpdater<K, A extends KeyedAsyncUpdate<K, A>> implements 
     @Override
     public String toString() {
         synchronized(lock) {
-            return Objects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this)
                 .add("currentlyFiring", currentlyFiring)
                 .add("blockedMap", blockedMap)
                 .toString();
