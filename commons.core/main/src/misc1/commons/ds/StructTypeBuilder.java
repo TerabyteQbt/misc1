@@ -69,11 +69,11 @@ public class StructTypeBuilder<S extends Struct<S, B>, B extends StructBuilder<S
     }
 
     public <VS extends MapStruct<VS, VB, K, VVS, VVB>, VB extends MapStructBuilder<VS, VB, K, VVS, VVB>, K, VVS, VVB> StructKeyBuilder<VS, VB> key(String name, MapStructType<VS, VB, K, VVS, VVB> type) {
-        return new StructKeyBuilder<>(name, VB::build, VS::builder).def(type.builder()).serializer(type.serializerBOptional());
+        return new StructKeyBuilder<>(name, VB::build, VS::builder).merge(type.merge()).def(type.builder()).serializer(type.serializerBOptional());
     }
 
     public <VS extends Struct<VS, VB>, VB extends StructBuilder<VS, VB>> StructKeyBuilder<VS, VB> key(String name, StructType<VS, VB> type) {
-        return new StructKeyBuilder<>(name, VB::build, VS::builder).def(type.builder()).serializer(type.serializerBOptional());
+        return new StructKeyBuilder<>(name, VB::build, VS::builder).merge(type.merge()).def(type.builder()).serializer(type.serializerBOptional());
     }
 
     public StructType<S, B> build() {
