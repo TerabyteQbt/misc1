@@ -36,7 +36,6 @@ task simplePublishJars(type: Copy) {
 }
 
 task sourcesJar(type: Jar) {
-    from sourceSets.main.allSource
     from sourceSets.test.allSource
 }
 
