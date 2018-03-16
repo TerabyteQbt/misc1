@@ -14,12 +14,6 @@ sourceSets {
         resources {
             srcDir "$System.env.PACKAGE_DIR/src"
         }
-        java {
-            srcDir "$System.env.PACKAGE_DIR/test"
-        }
-        resources {
-            srcDir "$System.env.PACKAGE_DIR/test"
-        }
         resources {
             srcDir "src"
         }
