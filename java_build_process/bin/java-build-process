@@ -18,6 +18,8 @@ MYTMPDIR="$(mktemp -d -t qbt-jbp-XXXXXXXXXXXX)"
 trap 'rm -rf "$MYTMPDIR"' EXIT
 
 cp -R "$JPB_HOME/proj" "$MYTMPDIR/proj"
+mkdir -p "$MYTMPDIR/proj/src/META-INF/qbt"
+echo "$PACKAGE_NAME@$PACKAGE_CUMULATIVE_VERSION" > "$MYTMPDIR/proj/src/META-INF/qbt/version"
 
 cd "$MYTMPDIR/proj"
 
