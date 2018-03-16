@@ -1,35 +1,37 @@
 apply plugin: 'java'
 
 dependencies {
-    compile fileTree(dir: "$System.env.INPUT_ARTIFACTS_DIR", include: 'strong/*/jars/*.jar')
+    testCompile fileTree(dir: "$System.env.INPUT_ARTIFACTS_DIR", include: 'strong/*/jars/*.jar')
 }
 
 version = "$System.env.PACKAGE_CUMULATIVE_VERSION"
 
 sourceSets {
-    main {
+    test {
         java {
             srcDir "$System.env.PACKAGE_DIR/src"
         }
         resources {
             srcDir "$System.env.PACKAGE_DIR/src"
+        }
+        java {
+            srcDir "$System.env.PACKAGE_DIR/test"
+        }
+        resources {
+            srcDir "$System.env.PACKAGE_DIR/test"
         }
         resources {
             srcDir "src"
         }
     }
-    test {
-        java {
-            srcDir "$System.env.PACKAGE_DIR/test"
-        }
-        resources {
-            srcDir "$System.env.PACKAGE_DIR/test"
-        }
-    }
+}
+
+task testJar(type: Jar) {
+    from sourceSets.test.output
 }
 
 task simplePublishJars(type: Copy) {
-    from jar
+    from testJar
     into "$System.env.OUTPUT_ARTIFACTS_DIR/jars"
 }
 
