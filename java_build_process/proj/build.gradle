@@ -25,6 +25,18 @@ sourceSets {
     }
 }
 
+jar {
+    File resourceDir = file("$buildDir/version-resources/META-INF")
+    resourceDir.mkdirs()
+    File qbtDir = file(resourceDir.toPath().resolve('qbt'))
+    qbtDir.mkdirs()
+    File versionFile = file(qbtDir.toPath().resolve('version'))
+    versionFile.text = "$System.env.PACKAGE_CUMULATIVE_VERSION"
+    into ('/META-INF') {
+        from fileTree(resourceDir)
+    }
+}
+
 task simplePublishJars(type: Copy) {
     from jar
     into "$System.env.OUTPUT_ARTIFACTS_DIR/jars"
