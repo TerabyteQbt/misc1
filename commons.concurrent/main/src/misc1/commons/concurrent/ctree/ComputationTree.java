@@ -77,6 +77,10 @@ public final class ComputationTree<V> {
         return list(Iterables.transform(inputs, (input) -> ComputationTree.constant(input).transform(fn)));
     }
 
+    public static <V, W> ComputationTree<ImmutableList<W>> transformIterableExec(Iterable<V> inputs, Function<V, ComputationTree<W>> fn) {
+        return list(Iterables.transform(inputs, (input) -> ComputationTree.constant(input).transformExec(fn)));
+    }
+
     public ComputationTree<ObjectUtils.Null> ignore() {
         return transform(Functions.constant(ObjectUtils.NULL));
     }
