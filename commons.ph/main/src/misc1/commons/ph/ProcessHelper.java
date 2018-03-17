@@ -58,6 +58,14 @@ public class ProcessHelper extends StructBuilder<ProcessHelperStruct, ProcessHel
         TYPE = b.build();
     }
 
+    public ProcessHelper inheritIO() {
+        ProcessHelper ph = this;
+        ph = ph.inheritInput();
+        ph = ph.inheritOutput();
+        ph = ph.inheritError();
+        return ph;
+    }
+
     public ProcessHelper inheritInput() {
         return set(IN, ProcessBuilder.Redirect.INHERIT);
     }
