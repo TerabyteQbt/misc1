@@ -6,16 +6,18 @@ dependencies {
 
 version = "$System.env.PACKAGE_CUMULATIVE_VERSION"
 
+System.out.println("USING SRC DIR: $System.env.SOURCESET_RELPATH")
+
 sourceSets {
     test {
         java {
-            srcDir "$System.env.PACKAGE_DIR/src"
+            srcDir "$System.env.PACKAGE_DIR/$System.env.SOURCESET_RELPATH"
         }
         resources {
-            srcDir "$System.env.PACKAGE_DIR/src"
+            srcDir "$System.env.PACKAGE_DIR/$System.env.SOURCESET_RELPATH"
         }
         resources {
-            srcDir "src"
+            srcDir "$System.env.SOURCESET_RELPATH"
         }
     }
 }

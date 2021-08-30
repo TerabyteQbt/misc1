@@ -4,8 +4,13 @@ eval export JAVA_HOME=\$JAVA_${QBT_ENV_JDK}_HOME
 
 set -e
 
+export SOURCESET_RELPATH="src"
+if [[ "x$1" != "x" ]]; then
+    export SOURCESET_RELPATH="$1"
+fi
+
 if [ -d "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release ]; then
-    for dir in src test
+    for dir in "$SOURCESET_RELPATH" test
     do
         "$INPUT_ARTIFACTS_DIR"/weak/qbt_fringe.linter.release/strong/qbt_fringe.linter.release/bin/linter -d "$PACKAGE_DIR/$dir"
     done
@@ -18,8 +23,8 @@ MYTMPDIR="$(mktemp -d -t qbt-jbp-XXXXXXXXXXXX)"
 trap 'rm -rf "$MYTMPDIR"' EXIT
 
 cp -R "$JPB_HOME/proj" "$MYTMPDIR/proj"
-mkdir -p "$MYTMPDIR/proj/src/META-INF/qbt"
-echo "$PACKAGE_NAME@$PACKAGE_CUMULATIVE_VERSION" > "$MYTMPDIR/proj/src/META-INF/qbt/version"
+mkdir -p "$MYTMPDIR/proj/$SOURCESET_RELPATH/META-INF/qbt"
+echo "$PACKAGE_NAME@$PACKAGE_CUMULATIVE_VERSION" > "$MYTMPDIR/proj/$SOURCESET_RELPATH/META-INF/qbt/version"
 
 cd "$MYTMPDIR/proj"
 
