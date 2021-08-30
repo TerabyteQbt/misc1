@@ -9,13 +9,13 @@ version = "$System.env.PACKAGE_CUMULATIVE_VERSION"
 sourceSets {
     test {
         java {
-            srcDir "$System.env.PACKAGE_DIR/src"
+            srcDir "$System.env.PACKAGE_DIR/$System.env.SOURCESET_RELPATH"
         }
         resources {
-            srcDir "$System.env.PACKAGE_DIR/src"
+            srcDir "$System.env.PACKAGE_DIR/$System.env.SOURCESET_RELPATH"
         }
         resources {
-            srcDir "src"
+            srcDir "$System.env.SOURCESET_RELPATH"
         }
     }
 }
