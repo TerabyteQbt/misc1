@@ -1,7 +1,7 @@
 apply plugin: 'java'
 
 dependencies {
-    testCompile fileTree(dir: "$System.env.INPUT_ARTIFACTS_DIR", include: 'strong/*/jars/*.jar')
+    testImplementation fileTree(dir: "$System.env.INPUT_ARTIFACTS_DIR", include: 'strong/*/jars/*.jar')
 }
 
 version = "$System.env.PACKAGE_CUMULATIVE_VERSION"
@@ -14,6 +14,7 @@ sourceSets {
         resources {
             srcDir "$System.env.PACKAGE_DIR/$System.env.SOURCESET_RELPATH"
         }
+        // TODO: can this be removed?  needed for IDE gen or something?
         resources {
             srcDir "$System.env.SOURCESET_RELPATH"
         }
@@ -31,6 +32,8 @@ task simplePublishJars(type: Copy) {
 
 task sourcesJar(type: Jar) {
     from sourceSets.test.allSource
+    // this is safe because we are listing the same src path twice intentionally
+    duplicatesStrategy = 'exclude'
 }
 
 task simplePublishSources(type: Copy) {
